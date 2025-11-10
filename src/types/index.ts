@@ -52,6 +52,31 @@ export interface CompanyProperty {
   address?: string;
 }
 
+export interface Property {
+  id: number;
+  propertyName: string;
+  propertyAddress: string;
+  description: string;
+  propertyType: string;
+  propertyValue: number;
+  rentalIncomePerAnnum: number;
+  company: Company;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePropertyPayload {
+  propertyName: string;
+  propertyAddress: string;
+  description: string;
+  propertyType: string;
+  propertyValue: number;
+  rentalIncomePerAnnum: number;
+  companyId: number;
+}
+
+export interface UpdatePropertyPayload extends CreatePropertyPayload {}
+
 export interface Company {
   id?: number;
   name: string;
@@ -88,3 +113,99 @@ export interface CreateCompanyPayload {
 }
 
 export interface UpdateCompanyPayload extends CreateCompanyPayload {}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: string; // ISO date string
+  end?: string; // ISO date string, optional for all-day events
+  allDay?: boolean;
+  description?: string;
+  color?: string;
+  extendedProps?: {
+    type: 'task' | 'meeting';
+    priority?: 'low' | 'medium' | 'high';
+    attendees?: string[];
+    location?: string;
+    companyId?: number;
+    userIds?: number[];
+  };
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  date: string; // ISO date string
+  description?: string;
+  priority?: 'low' | 'medium' | 'high';
+}
+
+export interface Meeting {
+  id: string;
+  title: string;
+  date: string; // ISO date string
+  startTime: string; // HH:MM format
+  endTime: string; // HH:MM format
+  description?: string;
+  companyId?: number;
+  userIds?: number[];
+}
+
+export interface Tenant {
+  id: number;
+  tenantName: string;
+  propertyId: number;
+  leaseStartDate: string;
+  leaseEndDate: string;
+  rentReviewDates: string;
+  breakDate: string;
+  lenderName: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateTenantPayload {
+  tenantName: string;
+  propertyId: number;
+  leaseStartDate: string;
+  leaseEndDate: string;
+  rentReviewDates: string;
+  breakDate: string;
+  lenderName: string;
+}
+
+export interface UpdateTenantPayload extends CreateTenantPayload {}
+
+export interface Document {
+  id: number;
+  name: string;
+  type: string;
+  url: string;
+  propertyId: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateDocumentPayload {
+  name: string;
+  type: string;
+  file: File | null; // For upload
+  propertyId: number;
+}
+
+export interface Invoice {
+  id: number;
+  amount: number;
+  date: string;
+  status: string;
+  propertyId: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateInvoicePayload {
+  amount: number;
+  date: string;
+  status: string;
+  propertyId: number;
+}

@@ -50,13 +50,13 @@ export const Layout = () => {
           backdropFilter: 'blur(10px)',
         }}
       >
-        <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 64 }, px: { xs: 1, sm: 2, md: 3 } }}>
           <IconButton
             color="inherit"
             aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: 'none' } }}
+            sx={{ mr: { xs: 1, sm: 2 }, display: { md: 'none' } }}
           >
             <MenuIcon />
           </IconButton>
@@ -67,6 +67,7 @@ export const Layout = () => {
             sx={{
               flexGrow: 1,
               fontWeight: 600,
+              fontSize: { xs: '1rem', sm: '1.25rem' },
               display: { xs: 'none', sm: 'block' }
             }}
           >
@@ -75,18 +76,18 @@ export const Layout = () => {
 
           {/* Search - Hidden on mobile */}
           {!isMobile && (
-            <IconButton color="inherit" sx={{ mr: 1 }}>
+            <IconButton color="inherit" sx={{ mr: 1, display: { xs: 'none', lg: 'inline-flex' } }}>
               <Search size={20} />
             </IconButton>
           )}
 
           {/* Notifications */}
-          <IconButton color="inherit" sx={{ mr: 1 }}>
+          <IconButton color="inherit" sx={{ mr: 1, display: { xs: 'none', sm: 'inline-flex' } }}>
             <Bell size={20} />
           </IconButton>
 
           {/* Theme Toggle */}
-          <IconButton color="inherit" onClick={toggleTheme} sx={{ mr: 2 }}>
+          <IconButton color="inherit" onClick={toggleTheme} sx={{ mr: { xs: 1, sm: 2 } }}>
             {mode === 'light' ? <Moon size={20} /> : <Sun size={20} />}
           </IconButton>
 
@@ -94,8 +95,8 @@ export const Layout = () => {
           <IconButton color="inherit" onClick={handleMenuOpen}>
             <Avatar
               sx={{
-                width: 40,
-                height: 40,
+                width: { xs: 32, sm: 40 },
+                height: { xs: 32, sm: 40 },
                 bgcolor: 'rgba(255,255,255,0.2)',
                 border: '2px solid rgba(255,255,255,0.3)'
               }}
@@ -157,13 +158,28 @@ export const Layout = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: { xs: 2, sm: 3 },
+          p: { xs: 1, sm: 2, md: 3 },
           mt: { xs: 7, sm: 8 },
           ml: { md: '280px' },
           transition: theme.transitions.create(['margin', 'width'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
           }),
+          overflow: 'auto',
+          height: 'calc(100vh - 64px)',
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: theme.palette.mode === 'light' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            background: theme.palette.mode === 'light' ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)',
+          },
         }}
       >
         <Outlet />

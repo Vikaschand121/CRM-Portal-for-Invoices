@@ -32,104 +32,77 @@ const menuItems = [
     icon: LayoutDashboard,
     path: '/dashboard',
   },
+
   {
     title: 'Property Management',
     icon: Building2,
     children: [
       { title: 'Dashboard', path: '/property-management' },
-       {
-    title: 'Calendar',
-    icon: Calendar,
-    path: '/calendar'
-   
-  },
+      {
+        title: 'Calendar',
+        path: '/calendar',
+      },
       { title: 'Companies', path: '/companies' },
       { title: 'Tasks', path: '/tasks' },
       { title: 'Financial', path: '/financial' },
       { title: 'Invoices', path: '/invoices' },
-       { title: 'Templates', path: '/invoices' },
+      { title: 'Templates', path: '/invoices' },
       { title: 'Users', path: '/users' },
     ],
   },
-   {
+  {
     title: 'Legal',
     icon: Building2,
     children: [
       { title: 'Dashboard', path: '/legal-dashboard' },
-       {
-    title: 'Calendar',
-    icon: Calendar,
-    path: '/calendar'
-   
-  },
       { title: 'Clients', path: '/companies' },
       { title: 'Tasks', path: '/tasks' },
       { title: 'Financial', path: '/financial' },
       { title: 'Invoices', path: '/invoices' },
-          { title: 'Templates', path: '/invoices' },
+      { title: 'Templates', path: '/invoices' },
       { title: 'Users', path: '/users' },
     ],
   },
-   {
+  {
     title: 'Financial',
     icon: Building2,
     children: [
-            { title: 'Dashboard', path: '/financial-dashboard' },
-             {
-    title: 'Calendar',
-    icon: Calendar,
-    path: '/calendar'
-   
-  },
-
+      { title: 'Dashboard', path: '/financial-dashboard' },
       { title: 'Clients', path: '/companies' },
       { title: 'Tasks', path: '/tasks' },
       { title: 'Financial', path: '/financial' },
       { title: 'Invoices', path: '/invoices' },
-          { title: 'Templates', path: '/invoices' },
+      { title: 'Templates', path: '/invoices' },
       { title: 'Users', path: '/users' },
     ],
   },
-   {
+  {
     title: 'Maintainance',
     icon: Building2,
     children: [
-                  { title: 'Dashboard', path: '/maintenance-dashboard' },
- {
-    title: 'Calendar',
-    icon: Calendar,
-    path: '/calendar'
-   
-  },
+      { title: 'Dashboard', path: '/maintenance-dashboard' },
       { title: 'Clients', path: '/companies' },
       { title: 'Tasks', path: '/tasks' },
       { title: 'Financial', path: '/financial' },
       { title: 'Invoices', path: '/invoices' },
-          { title: 'Templates', path: '/invoices' },
+      { title: 'Templates', path: '/invoices' },
       { title: 'Users', path: '/users' },
     ],
   },
-   {
+  {
     title: 'Accounts',
     icon: Building2,
     children: [
-                        { title: 'Dashboard', path: '/accounts-dashboard' },
-                         {
-    title: 'Calendar',
-    icon: Calendar,
-    path: '/calendar'
-   
-  },
-
+      { title: 'Dashboard', path: '/accounts-dashboard' },
       { title: 'Clients', path: '/companies' },
       { title: 'Tasks', path: '/tasks' },
       { title: 'Financial', path: '/financial' },
       { title: 'Invoices', path: '/invoices' },
-          { title: 'Templates', path: '/invoices' },
+      { title: 'Templates', path: '/invoices' },
       { title: 'Users', path: '/users' },
     ],
   },
-   
+
   {
     title: 'Users',
     icon: Users,
@@ -141,7 +114,7 @@ const menuItems = [
     //   { title: 'Accounts', path: '/accounts' },
     // ],
   },
- 
+
 ];
 
 interface SideNavProps {
@@ -172,6 +145,7 @@ export const SideNav = ({ open, onClose }: SideNavProps) => {
     const isActive = location.pathname === item.path;
     const hasChildren = item.children && item.children.length > 0;
     const IconComponent = item.icon;
+    const isChild = level > 0;
 
     return (
       <Box key={item.title}>
@@ -179,13 +153,13 @@ export const SideNav = ({ open, onClose }: SideNavProps) => {
           <ListItemButton
             onClick={() => hasChildren ? handleExpandClick(item.title) : handleItemClick(item.path)}
             sx={{
-              pl: level * 2 + 2,
-              pr: 2,
-              py: 1.5,
+              pl: isChild ? 2 + level : 2,
+              pr: isChild ? 1.5 : 2,
+              py: isChild ? 1 : 1.5,
               bgcolor: isActive ? 'rgba(255,255,255,0.2)' : 'transparent',
               color: 'white',
               borderRadius: 1,
-              mx: 1,
+              mx: isChild ? 0.5 : 1,
               '&:hover': {
                 bgcolor: isActive ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)',
               },
@@ -194,7 +168,7 @@ export const SideNav = ({ open, onClose }: SideNavProps) => {
             <ListItemIcon
               sx={{
                 color: 'rgba(255,255,255,0.8)',
-                minWidth: 40,
+                minWidth: isChild ? 32 : 40,
               }}
             >
               {hasChildren ? (
@@ -233,20 +207,52 @@ export const SideNav = ({ open, onClose }: SideNavProps) => {
       color: 'white'
     }}>
       <Box sx={{
-        p: 3,
+        p: { xs: 2, sm: 3 },
+        pt: { xs: 2, sm: 3 },
         borderBottom: '1px solid rgba(255,255,255,0.2)',
         background: 'rgba(255,255,255,0.1)',
         backdropFilter: 'blur(10px)'
       }}>
-        <Typography variant="h6" fontWeight={700} sx={{ color: 'white' }}>
+        {/* <Typography
+          variant="h6"
+          fontWeight={700}
+          sx={{
+            color: 'white',
+            fontSize: { xs: '1rem', sm: '1.25rem' },
+            lineHeight: 1.2
+          }}
+        >
           Positive Bespoke Business Solutions Limited
-        </Typography>
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+        </Typography> */}
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'rgba(255,255,255,0.8)',
+            fontSize: { xs: '0.75rem', sm: '0.875rem' }
+          }}
+        >
           Admin Dashboard
         </Typography>
       </Box>
 
-      <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
+      <Box sx={{
+        flex: 1,
+        overflow: 'auto',
+        p: 1,
+        '&::-webkit-scrollbar': {
+          width: '6px',
+        },
+        '&::-webkit-scrollbar-track': {
+          background: 'transparent',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: 'rgba(255,255,255,0.3)',
+          borderRadius: '3px',
+        },
+        '&::-webkit-scrollbar-thumb:hover': {
+          background: 'rgba(255,255,255,0.5)',
+        },
+      }}>
         <List>
           {menuItems.map(item => renderMenuItem(item))}
         </List>
@@ -265,10 +271,10 @@ export const SideNav = ({ open, onClose }: SideNavProps) => {
           keepMounted: true, // Better open performance on mobile.
         }}
         sx={{
-          display: { xs: 'block', md: 'none' },
+          display: { xs: 'block', lg: 'none' },
           '& .MuiDrawer-paper': {
             boxSizing: 'border-box',
-            width: drawerWidth,
+            width: { xs: '280px', sm: '320px' },
             borderRight: 1,
             borderColor: 'divider',
           },
@@ -281,7 +287,7 @@ export const SideNav = ({ open, onClose }: SideNavProps) => {
       <Drawer
         variant="permanent"
         sx={{
-          display: { xs: 'none', md: 'block' },
+          display: { xs: 'none', lg: 'block' },
           '& .MuiDrawer-paper': {
             boxSizing: 'border-box',
             width: drawerWidth,

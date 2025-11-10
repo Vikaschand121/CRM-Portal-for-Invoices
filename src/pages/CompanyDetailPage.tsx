@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Card,
@@ -9,6 +10,7 @@ import {
   Chip,
   Container,
   Divider,
+  LinearProgress,
   Paper,
   Snackbar,
   Typography,
@@ -193,35 +195,6 @@ export const CompanyDetailPage = () => {
 
   const properties = company.properties ?? [];
 
-  const summaryCards = [
-    {
-      label: 'Total Properties',
-      value:
-        portfolioStats.totalProperties !== null
-          ? portfolioStats.totalProperties.toString()
-          : 'N/A',
-      helper: 'Total Properties',
-      icon: HomeWork,
-    },
-    {
-      label: 'Total Value',
-      value: portfolioStats.portfolioValue
-        ? formatCurrency(portfolioStats.portfolioValue)
-        : 'N/A',
-      helper: 'Portfolio Value',
-      icon: AccountBalance,
-    },
-    {
-      label: 'Active Properties',
-      value:
-        portfolioStats.activeProperties !== null
-          ? portfolioStats.activeProperties.toString()
-          : 'N/A',
-      helper: 'Active Properties',
-      icon: TrendingUp,
-    },
-  ];
-
   const overviewItems = [
     {
       label: 'Company Type',
@@ -256,93 +229,228 @@ export const CompanyDetailPage = () => {
   ];
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ mt: 4, mb: 6 }}>
+    <Container maxWidth="xl">
+      <Box sx={{
+        mt: { xs: 1, sm: 1.5 },
+        mb: { xs: 3, sm: 4 },
+        px: { xs: 1, sm: 2, md: 0 }
+      }}>
+        {/* Hero Section */}
         <Box
           sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: { xs: 'flex-start', md: 'center' },
-            flexDirection: { xs: 'column', md: 'row' },
-            gap: 2,
+            position: 'relative',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: 4,
+            p: 3,
             mb: 3,
+            color: 'white',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="4"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+              opacity: 0.1,
+            },
           }}
         >
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Button
-              startIcon={<ArrowBack />}
-              variant="contained"
-              color="inherit"
-              onClick={() => navigate('/companies')}
-              sx={{
-                alignSelf: { xs: 'stretch', sm: 'flex-start' },
-                bgcolor: '#e8eefc',
-                color: '#1f2937',
-                '&:hover': {
-                  bgcolor: '#d5dff8',
-                },
-              }}
-            >
-              Back to Companies
-            </Button>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Business color="primary" sx={{ fontSize: 32 }} />
-              <Typography variant="h4" component="h1" fontWeight={700}>
-                {company.name}
-              </Typography>
-            </Box>
-            <Chip
-              label={company.natureOfBusiness || 'N/A'}
-              color="primary"
-              variant="outlined"
-              sx={{ width: 'fit-content' }}
-            />
-          </Box>
+          <Box sx={{ position: 'relative', zIndex: 1 }}>
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: { xs: 'flex-start', md: 'center' },
+              flexDirection: { xs: 'column', md: 'row' },
+              gap: { xs: 2, md: 0 },
+              mb: { xs: 2, md: 3 }
+            }}>
+              <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: { xs: 1.5, sm: 2 },
+                mb: 1,
+                flexDirection: { xs: 'column', sm: 'row' },
+                textAlign: { xs: 'center', sm: 'left' }
+              }}>
+                <Avatar
+                  sx={{
+                    width: { xs: 56, sm: 64 },
+                    height: { xs: 56, sm: 64 },
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    border: '3px solid rgba(255, 255, 255, 0.3)',
+                  }}
+                >
+                  <Business sx={{ fontSize: { xs: 28, sm: 32 } }} />
+                </Avatar>
+                <Box>
+                  <Typography
+                    variant="h3"
+                    component="h1"
+                    fontWeight={800}
+                    sx={{
+                      mb: 0.5,
+                      fontSize: { xs: '1.8rem', sm: '2.125rem', md: '3rem' }
+                    }}
+                  >
+                    {company.name}
+                  </Typography>
+                  <Chip
+                    label={company.natureOfBusiness || 'N/A'}
+                    sx={{
+                      bgcolor: 'rgba(255, 255, 255, 0.2)',
+                      color: 'white',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      fontWeight: 600,
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    }}
+                  />
+                </Box>
+              </Box>
 
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant="outlined"
-              startIcon={<Edit />}
-              onClick={() => navigate(`/companies/${company.id}/edit`)}
-            >
-              Edit
-            </Button>
-            <Button
-              variant="contained"
-              color="error"
-              startIcon={<Delete />}
-              onClick={handleDelete}
-            >
-              Delete
-            </Button>
+              <Box sx={{
+                display: 'flex',
+                gap: 1,
+                width: { xs: '100%', md: 'auto' },
+                justifyContent: { xs: 'center', md: 'flex-end' }
+              }}>
+                <Button
+                  startIcon={<ArrowBack />}
+                  variant="contained"
+                  onClick={() => navigate('/companies')}
+                  sx={{
+                    mb: { xs: 0, md: 2 },
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    '&:hover': {
+                      bgcolor: 'rgba(255, 255, 255, 0.3)',
+                    },
+                    width: { xs: '100%', sm: 'auto' },
+                    minWidth: { xs: '200px', sm: 'auto' },
+                  }}
+                >
+                  Back to Companies
+                </Button>
+              </Box>
+            </Box>
+
+            {/* View Properties Button */}
+            <Box sx={{ mt: 3 }}>
+              <Button
+                variant="contained"
+                size="large"
+                onClick={() => navigate(`/companies/${company.id}/properties`)}
+                sx={{
+                  bgcolor: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  '&:hover': {
+                    bgcolor: 'rgba(255, 255, 255, 0.3)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 10px 20px rgba(0, 0, 0, 0.2)',
+                  },
+                  px: 4,
+                  py: 1.5,
+                  fontSize: '1.1rem',
+                  fontWeight: 600,
+                  borderRadius: 3,
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                View All Properties
+              </Button>
+            </Box>
           </Box>
         </Box>
 
-        <Divider sx={{ mb: 3 }} />
 
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
-            gap: 2.5,
-            mb: 4,
+            gridTemplateColumns: '1fr',
+            gap: 2,
+            mb: 3,
           }}
         >
-          {summaryCards.map(({ label, value, helper, icon: Icon }) => (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: '1fr',
+                md: '1fr 1fr',
+                lg: '1fr 1fr'
+              },
+              gap: { xs: 2, sm: 2.5 },
+            }}
+          >
             <Card
-              key={label}
               sx={{
-                borderRadius: 3,
-                boxShadow: '0 16px 40px rgba(15, 23, 42, 0.08)',
+                borderRadius: 4,
                 border: '1px solid',
                 borderColor: 'divider',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                boxShadow: '0 20px 40px rgba(15, 23, 42, 0.1)',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 32px 64px rgba(15, 23, 42, 0.15)',
+                },
               }}
             >
-              <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {label}
-                  </Typography>
+              <CardContent sx={{ p: 2 }}>
+                <Typography variant="h6" fontWeight={700} gutterBottom sx={{ color: 'primary.main' }}>
+                  Company Overview
+                </Typography>
+                <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  {overviewItems.map(({ label, value }) => (
+                    <Box
+                      key={label}
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        p: 1.5,
+                        borderRadius: 2,
+                        bgcolor: 'grey.50',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          bgcolor: 'grey.100',
+                        },
+                      }}
+                    >
+                      <Typography variant="body2" color="text.secondary" fontWeight={600}>
+                        {label}
+                      </Typography>
+                      <Typography variant="body2" fontWeight={600} sx={{ textAlign: 'right' }}>
+                        {value || 'N/A'}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </CardContent>
+            </Card>
+
+            <Card
+              sx={{
+                borderRadius: 4,
+                border: '1px solid',
+                borderColor: 'divider',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                boxShadow: '0 20px 40px rgba(15, 23, 42, 0.1)',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 32px 64px rgba(15, 23, 42, 0.15)',
+                },
+              }}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <Box
                     sx={{
                       width: 40,
@@ -352,217 +460,145 @@ export const CompanyDetailPage = () => {
                       alignItems: 'center',
                       justifyContent: 'center',
                       bgcolor: 'primary.main',
-                      color: 'primary.contrastText',
+                      color: 'white',
                     }}
                   >
-                    <Icon fontSize="small" />
+                    <CalendarToday fontSize="small" />
+                  </Box>
+                  <Typography variant="h6" fontWeight={700} sx={{ color: 'primary.main' }}>
+                    Key Dates
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'grey.50', transition: 'all 0.2s ease', '&:hover': { bgcolor: 'grey.100' } }}>
+                    <Typography variant="body2" color="text.secondary" fontWeight={600}>
+                      Incorporation Date
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      {formatDate(company.incorporationDate)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'grey.50', transition: 'all 0.2s ease', '&:hover': { bgcolor: 'grey.100' } }}>
+                    <Typography variant="body2" color="text.secondary" fontWeight={600}>
+                      Confirmation Statement Due
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      {formatDate(company.confirmationStatementDue)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'grey.50', transition: 'all 0.2s ease', '&:hover': { bgcolor: 'grey.100' } }}>
+                    <Typography variant="body2" color="text.secondary" fontWeight={600}>
+                      Accounts Due
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      {formatDate(company.accountsDue)}
+                    </Typography>
                   </Box>
                 </Box>
-                <Typography variant="h4" fontWeight={700}>
-                  {value}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {helper}
-                </Typography>
               </CardContent>
             </Card>
-          ))}
-        </Box>
 
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' },
-            gap: 3,
-            mb: 4,
-          }}
-        >
-          <Card
-            sx={{
-              borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
-          >
-            <CardContent>
-              <Typography variant="h6" fontWeight={600} gutterBottom>
-                Company Overview
-              </Typography>
-              <Box sx={{ mt: 2, borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
-                {overviewItems.map(({ label, value }) => (
-                  <InfoRow key={label} label={label} value={value || 'N/A'} />
-                ))}
-              </Box>
-            </CardContent>
-          </Card>
-
-          <Card
-            sx={{
-              borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
-          >
-            <CardContent>
-              <Typography variant="h6" fontWeight={600} gutterBottom>
-                Properties List
-              </Typography>
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 1.5,
-                  mt: 2,
-                  maxHeight: 320,
-                  overflowY: 'auto',
-                  pr: 1,
-                }}
-              >
-                {properties.length === 0 && (
-                  <Typography variant="body2" color="text.secondary">
-                    No properties recorded for this company yet.
-                  </Typography>
-                )}
-                {properties.map((property) => (
+            <Card
+              sx={{
+                borderRadius: 4,
+                border: '1px solid',
+                borderColor: 'divider',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                boxShadow: '0 20px 40px rgba(15, 23, 42, 0.1)',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 32px 64px rgba(15, 23, 42, 0.15)',
+                },
+              }}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <Box
-                    key={property.id ?? property.name}
                     sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between',
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      borderRadius: 2,
-                      px: 2,
-                      py: 1.5,
-                      bgcolor: 'background.paper',
+                      justifyContent: 'center',
+                      bgcolor: 'success.main',
+                      color: 'white',
                     }}
                   >
-                    <Box>
-                      <Typography variant="body1" fontWeight={600}>
-                        {property.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {property.status || 'Status unknown'}
-                      </Typography>
-                    </Box>
-                    <Button
-                      size="small"
-                      color="success"
-                      onClick={() => navigate('/property-management')}
-                    >
-                      View Details &gt;
-                    </Button>
+                    <People fontSize="small" />
                   </Box>
-                ))}
-              </Box>
-            </CardContent>
-          </Card>
-        </Box>
+                  <Typography variant="h6" fontWeight={700} sx={{ color: 'success.main' }}>
+                    Directors & Shareholding
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'success.50', transition: 'all 0.2s ease', '&:hover': { bgcolor: 'success.100' } }}>
+                    <Typography variant="body2" color="success.800" fontWeight={600}>
+                      Directors
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      {company.directors || 'N/A'}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'success.50', transition: 'all 0.2s ease', '&:hover': { bgcolor: 'success.100' } }}>
+                    <Typography variant="body2" color="success.800" fontWeight={600}>
+                      Shareholding
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      {company.shareholding || 'N/A'}
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
 
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
-            gap: 3,
-          }}
-        >
-          <Card
-            sx={{
-              borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
-          >
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <CalendarToday color="primary" />
-                <Typography variant="h6" fontWeight={600}>
-                  Key Dates
+            <Card
+              sx={{
+                borderRadius: 4,
+                border: '1px solid',
+                borderColor: 'divider',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                boxShadow: '0 20px 40px rgba(15, 23, 42, 0.1)',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 32px 64px rgba(15, 23, 42, 0.15)',
+                },
+              }}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: 'warning.main',
+                      color: 'white',
+                    }}
+                  >
+                    <LocationOn fontSize="small" />
+                  </Box>
+                  <Typography variant="h6" fontWeight={700} sx={{ color: 'warning.main' }}>
+                    Registered Address
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary" gutterBottom fontWeight={600}>
+                  Primary Location
                 </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Incorporation Date
-                  </Typography>
-                  <Typography variant="body1" fontWeight={500}>
-                    {formatDate(company.incorporationDate)}
+                <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'warning.50', border: '1px solid', borderColor: 'warning.200' }}>
+                  <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', fontWeight: 500 }}>
+                    {company.registeredAddress}
                   </Typography>
                 </Box>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Confirmation Statement Due
-                  </Typography>
-                  <Typography variant="body1" fontWeight={500}>
-                    {formatDate(company.confirmationStatementDue)}
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Accounts Due
-                  </Typography>
-                  <Typography variant="body1" fontWeight={500}>
-                    {formatDate(company.accountsDue)}
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Box>
 
-          <Card
-            sx={{
-              borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
-          >
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <People color="primary" />
-                <Typography variant="h6" fontWeight={600}>
-                  Directors & Shareholding
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Directors
-                  </Typography>
-                  <Typography variant="body1">{company.directors || 'N/A'}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Shareholding
-                  </Typography>
-                  <Typography variant="body1">{company.shareholding || 'N/A'}</Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-
-          <Card
-            sx={{
-              borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
-          >
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <LocationOn color="primary" />
-                <Typography variant="h6" fontWeight={600}>
-                  Registered Address
-                </Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Primary Location
-              </Typography>
-              <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                {company.registeredAddress}
-              </Typography>
-            </CardContent>
-          </Card>
         </Box>
       </Box>
 

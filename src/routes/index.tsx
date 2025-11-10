@@ -4,6 +4,9 @@ import { TwoFactorPage } from '../pages/TwoFactorPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { CompaniesPage } from '../pages/CompaniesPage';
 import { CompanyDetailPage } from '../pages/CompanyDetailPage';
+import { CompanyPropertiesPage } from '../pages/CompanyPropertiesPage';
+import { PropertyDetailPage } from '../pages/PropertyDetailPage';
+import { DocumentViewerPage } from '../pages/DocumentViewerPage';
 import { UsersPage } from '../pages/UsersPage';
 import { LegalPage } from '../pages/LegalPage';
 import { FinancialPage } from '../pages/FinancialPage';
@@ -17,6 +20,7 @@ import { AccountsDashboardPage } from '../pages/AccountsDashboardPage';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { PublicRoute } from '../components/PublicRoute';
 import { Layout } from '../components/Layout';
+import CalendarPage from '../pages/calendar/CalendarPage';
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div>
@@ -61,11 +65,15 @@ export const AppRoutes = () => {
         <Route path="property-management" element={<PropertyManagementPage />} />
         <Route path="companies" element={<CompaniesPage />} />
         <Route path="companies/:id" element={<CompanyDetailPage />} />
+        <Route path="companies/:id/properties" element={<CompanyPropertiesPage />} />
+        <Route path="companies/:companyId/properties/:propertyId" element={<PropertyDetailPage />} />
+        <Route path="companies/:companyId/properties/:propertyId/documents/:documentId" element={<DocumentViewerPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="legal" element={<LegalPage />} />
         <Route path="financial" element={<FinancialPage />} />
         <Route path="maintenance" element={<MaintenancePage />} />
         <Route path="accounts" element={<AccountsPage />} />
+        <Route path="calendar" element={<CalendarPage />} />
         <Route path="tasks" element={<PlaceholderPage title="Tasks" />} />
         <Route path="invoices" element={<PlaceholderPage title="Invoices" />} />
       </Route>
