@@ -116,7 +116,15 @@ export const PropertyDetailPage = () => {
     rentReviewDates: '',
     breakDate: '',
     lenderName: '',
-    isVatAvailable: false,
+    // isVatAvailable: false,
+  });
+  const [tenantFormErrors, setTenantFormErrors] = useState({
+    tenantName: false,
+    leaseStartDate: false,
+    leaseEndDate: false,
+    rentReviewDates: false,
+    breakDate: false,
+    lenderName: false,
   });
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [documentForm, setDocumentForm] = useState<CreateDocumentPayload>({
@@ -230,7 +238,15 @@ export const PropertyDetailPage = () => {
       rentReviewDates: '',
       breakDate: '',
       lenderName: '',
-      isVatAvailable: false,
+      // isVatAvailable: false,
+    });
+    setTenantFormErrors({
+      tenantName: false,
+      leaseStartDate: false,
+      leaseEndDate: false,
+      rentReviewDates: false,
+      breakDate: false,
+      lenderName: false,
     });
     setTenantDialogOpen(true);
   };
@@ -245,7 +261,15 @@ export const PropertyDetailPage = () => {
       rentReviewDates: tenant.rentReviewDates,
       breakDate: tenant.breakDate,
       lenderName: tenant.lenderName,
-      isVatAvailable: tenant.isVatAvailable,
+      // isVatAvailable: tenant.isVatAvailable,
+    });
+    setTenantFormErrors({
+      tenantName: false,
+      leaseStartDate: false,
+      leaseEndDate: false,
+      rentReviewDates: false,
+      breakDate: false,
+      lenderName: false,
     });
     setTenantDialogOpen(true);
   };
@@ -263,6 +287,22 @@ export const PropertyDetailPage = () => {
   };
 
   const handleSaveTenant = async () => {
+    // Validation
+    const errors = {
+      tenantName: !tenantForm.tenantName.trim(),
+      leaseStartDate: !tenantForm.leaseStartDate,
+      leaseEndDate: !tenantForm.leaseEndDate,
+      rentReviewDates: !tenantForm.rentReviewDates.trim(),
+      breakDate: !tenantForm.breakDate,
+      lenderName: !tenantForm.lenderName.trim(),
+    };
+    setTenantFormErrors(errors);
+
+    if (Object.values(errors).some(Boolean)) {
+      showSnackbar('Please fill in all required fields.', 'error');
+      return;
+    }
+
     try {
       if (editingTenant) {
         await tenantsService.updateTenant(editingTenant.id, tenantForm);
@@ -788,7 +828,7 @@ export const PropertyDetailPage = () => {
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Rent Review Dates</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Break Date</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Lender Name</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>VAT Available</TableCell>
+                  {/* <TableCell sx={{ color: 'white', fontWeight: 600 }}>VAT Available</TableCell> */}
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -801,7 +841,7 @@ export const PropertyDetailPage = () => {
                     <TableCell>{tenant.rentReviewDates}</TableCell>
                     <TableCell>{new Date(tenant.breakDate).toLocaleDateString()}</TableCell>
                     <TableCell>{tenant.lenderName}</TableCell>
-                    <TableCell>{tenant.isVatAvailable ? 'Yes' : 'No'}</TableCell>
+                    {/* <TableCell>{tenant.isVatAvailable ? 'Yes' : 'No'}</TableCell> */}
                     <TableCell>
                       <IconButton onClick={() => handleEditTenant(tenant)}>
                         <Edit />
@@ -912,6 +952,9 @@ export const PropertyDetailPage = () => {
               value={tenantForm.tenantName}
               onChange={(e) => setTenantForm({ ...tenantForm, tenantName: e.target.value })}
               fullWidth
+              required
+              error={tenantFormErrors.tenantName}
+              helperText={tenantFormErrors.tenantName ? "* required" : ""}
             />
             <TextField
               label="Lease Start Date"
@@ -920,6 +963,9 @@ export const PropertyDetailPage = () => {
               onChange={(e) => setTenantForm({ ...tenantForm, leaseStartDate: e.target.value })}
               fullWidth
               InputLabelProps={{ shrink: true }}
+              required
+              error={tenantFormErrors.leaseStartDate}
+              helperText={tenantFormErrors.leaseStartDate ? "* required" : ""}
             />
             <TextField
               label="Lease End Date"
@@ -928,12 +974,18 @@ export const PropertyDetailPage = () => {
               onChange={(e) => setTenantForm({ ...tenantForm, leaseEndDate: e.target.value })}
               fullWidth
               InputLabelProps={{ shrink: true }}
+              required
+              error={tenantFormErrors.leaseEndDate}
+              helperText={tenantFormErrors.leaseEndDate ? "* required" : ""}
             />
             <TextField
               label="Rent Review Dates"
               value={tenantForm.rentReviewDates}
               onChange={(e) => setTenantForm({ ...tenantForm, rentReviewDates: e.target.value })}
               fullWidth
+              required
+              error={tenantFormErrors.rentReviewDates}
+              helperText={tenantFormErrors.rentReviewDates ? "* required" : ""}
             />
             <TextField
               label="Break Date"
@@ -942,14 +994,20 @@ export const PropertyDetailPage = () => {
               onChange={(e) => setTenantForm({ ...tenantForm, breakDate: e.target.value })}
               fullWidth
               InputLabelProps={{ shrink: true }}
+              required
+              error={tenantFormErrors.breakDate}
+              helperText={tenantFormErrors.breakDate ? "* required" : ""}
             />
             <TextField
               label="Lender Name"
               value={tenantForm.lenderName}
               onChange={(e) => setTenantForm({ ...tenantForm, lenderName: e.target.value })}
               fullWidth
+              // required
+              // error={tenantFormErrors.lenderName}
+              // helperText={tenantFormErrors.lenderName ? "* required" : ""}
             />
-            <FormControlLabel
+            {/* <FormControlLabel
               control={
                 <Switch
                   checked={tenantForm.isVatAvailable}
@@ -958,7 +1016,7 @@ export const PropertyDetailPage = () => {
                 />
               }
               label="Is VAT Applicable"
-            />
+            /> */}
           </Box>
         </DialogContent>
         <DialogActions>

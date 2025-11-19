@@ -160,7 +160,7 @@ export interface Tenant {
   rentReviewDates: string;
   breakDate: string;
   lenderName: string;
-  isVatAvailable: boolean;
+  // isVatAvailable: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -173,7 +173,7 @@ export interface CreateTenantPayload {
   rentReviewDates: string;
   breakDate: string;
   lenderName: string;
-  isVatAvailable: boolean;
+  // isVatAvailable: boolean;
 }
 
 export interface UpdateTenantPayload extends CreateTenantPayload {}

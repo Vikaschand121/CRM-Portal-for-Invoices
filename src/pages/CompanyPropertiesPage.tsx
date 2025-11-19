@@ -237,7 +237,7 @@ export const CompanyPropertiesPage = () => {
 
   const propertyStats = useMemo(() => {
     const totalValue = properties.reduce(
-      (sum, property) => sum + property.propertyValue,
+      (sum, property) => sum + Number(property.propertyValue),
       0,
     );
     const totalRentalIncome = properties.reduce(
@@ -252,24 +252,21 @@ export const CompanyPropertiesPage = () => {
         value: properties.length.toString(),
         helper: 'Total Properties',
         icon: HomeWork,
-        // action: company?.id
-        //   ? {
-        //       label: 'View All',
-        //       onClick: () => navigate(`/companies/${company.id}/properties`),
-        //     }
-        //   : undefined,
+        action: undefined,
       },
       {
         label: 'Portfolio Value',
         value: formatCurrency(totalValue),
         helper: 'Total Portfolio Value',
         icon: AccountBalance,
+        action: undefined,
       },
       {
         label: 'Active Properties',
         value: activeProperties.toString(),
         helper: 'Active Properties',
         icon: TrendingUp,
+        action: undefined,
       },
     ];
   }, [properties, company]);
@@ -305,12 +302,12 @@ export const CompanyPropertiesPage = () => {
     return null;
   }
 
-  const summaryCards = propertyStats.map(({ label, value, helper, icon: Icon, action }) => ({
-    label,
-    value,
-    helper,
-    icon: Icon,
-    action,
+  const summaryCards = propertyStats.map((stat) => ({
+    label: stat.label,
+    value: stat.value,
+    helper: stat.helper,
+    icon: stat.icon,
+    action: stat.action,
   }));
 
   return (
@@ -498,7 +495,7 @@ export const CompanyPropertiesPage = () => {
                     <Button
                       size="small"
                       variant="outlined"
-                      onClick={action.onClick}
+                      onClick={(action as any).onClick}
                       sx={{
                         mt: 2,
                         color: 'white',
@@ -509,7 +506,7 @@ export const CompanyPropertiesPage = () => {
                         },
                       }}
                     >
-                      {action.label}
+                      {(action as any).label}
                     </Button>
                   )}
                   {label === 'Active Properties' && propertyStats[2].value !== '0' && propertyStats[0].value !== '0' && (
