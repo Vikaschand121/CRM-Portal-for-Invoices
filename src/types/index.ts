@@ -160,6 +160,7 @@ export interface Tenant {
   rentReviewDates: string;
   breakDate: string;
   lenderName: string;
+  isVatAvailable: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -172,6 +173,7 @@ export interface CreateTenantPayload {
   rentReviewDates: string;
   breakDate: string;
   lenderName: string;
+  isVatAvailable: boolean;
 }
 
 export interface UpdateTenantPayload extends CreateTenantPayload {}
@@ -209,3 +211,15 @@ export interface CreateInvoicePayload {
   status: string;
   propertyId: number;
 }
+
+export interface BankDetails {
+  accountHolderName: string;
+  bankName: string;
+  sortCode: string;
+  accountNumber: string;
+  bankAddress: string;
+}
+
+export interface CreateBankDetailsPayload extends BankDetails {}
+
+export interface UpdateBankDetailsPayload extends BankDetails {}

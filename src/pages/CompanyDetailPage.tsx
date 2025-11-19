@@ -9,10 +9,15 @@ import {
   CardContent,
   Chip,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
   LinearProgress,
   Paper,
   Snackbar,
+  TextField,
   Typography,
 } from '@mui/material';
 import {
@@ -27,8 +32,9 @@ import {
   People,
   TrendingUp,
 } from '@mui/icons-material';
-import { Company } from '../types';
+import { Company, BankDetails, CreateBankDetailsPayload, UpdateBankDetailsPayload } from '../types';
 import { companiesService } from '../services/companies.service';
+import { propertiesService } from '../services/properties.service';
 import { formatDate } from '../utils/helpers';
 
 const GBP_FORMATTER = new Intl.NumberFormat('en-GB', {
@@ -88,6 +94,16 @@ export const CompanyDetailPage = () => {
 
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
+  const [bankDetailsLoading, setBankDetailsLoading] = useState(false);
+  const [bankDetailsDialogOpen, setBankDetailsDialogOpen] = useState(false);
+  const [bankDetailsForm, setBankDetailsForm] = useState<CreateBankDetailsPayload>({
+    accountHolderName: '',
+    bankName: '',
+    sortCode: '',
+    accountNumber: '',
+    bankAddress: '',
+  });
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -111,6 +127,82 @@ export const CompanyDetailPage = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadBankDetails = async () => {
+    if (!id) {
+      return;
+    }
+
+    try {
+      setBankDetailsLoading(true);
+      const data = await propertiesService.getBankDetails(parseInt(id, 10));
+      setBankDetails(data);
+    } catch (error) {
+      // Bank details might not exist, so don't show error
+      setBankDetails(null);
+    } finally {
+      setBankDetailsLoading(false);
+    }
+  };
+
+  const handleOpenBankDetailsDialog = () => {
+    if (bankDetails) {
+      setBankDetailsForm(bankDetails);
+      setBankDetailsDialogOpen(true);
+    }
+  };
+
+  const handleCloseBankDetailsDialog = () => {
+    setBankDetailsDialogOpen(false);
+  };
+
+  const handleSaveBankDetails = async () => {
+    if (!id) {
+      return;
+    }
+
+    try {
+      // Always use POST for create/update
+      await propertiesService.createBankDetails(parseInt(id, 10), bankDetailsForm);
+      setSnackbar({
+        open: true,
+        message: bankDetails ? 'Bank details updated successfully' : 'Bank details created successfully',
+        severity: 'success',
+      });
+      setBankDetailsDialogOpen(false);
+      loadBankDetails();
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Failed to save bank details',
+        severity: 'error',
+      });
+    }
+  };
+
+  const handleDeleteBankDetails = async () => {
+    if (!id || !bankDetails) {
+      return;
+    }
+
+    if (window.confirm('Are you sure you want to delete the bank details?')) {
+      try {
+        await propertiesService.deleteBankDetails(parseInt(id, 10));
+        setBankDetails(null);
+        setSnackbar({
+          open: true,
+          message: 'Bank details deleted successfully',
+          severity: 'success',
+        });
+      } catch (error) {
+        setSnackbar({
+          open: true,
+          message: 'Failed to delete bank details',
+          severity: 'error',
+        });
+      }
     }
   };
 
@@ -141,6 +233,26 @@ export const CompanyDetailPage = () => {
   useEffect(() => {
     loadCompany();
   }, [id]);
+
+  useEffect(() => {
+    if (company) {
+      loadBankDetails();
+    }
+  }, [company]);
+
+  useEffect(() => {
+    if (bankDetails) {
+      setBankDetailsForm(bankDetails);
+    } else {
+      setBankDetailsForm({
+        accountHolderName: '',
+        bankName: '',
+        sortCode: '',
+        accountNumber: '',
+        bankAddress: '',
+      });
+    }
+  }, [bankDetails]);
 
   const portfolioStats = useMemo(() => {
     if (!company) {
@@ -600,7 +712,268 @@ export const CompanyDetailPage = () => {
           </Box>
 
         </Box>
+
+        {/* Bank Details Section */}
+        <Box sx={{ mt: 3 }}>
+          <Card
+            sx={{
+              borderRadius: 4,
+              border: '1px solid',
+              borderColor: 'divider',
+              background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+              boxShadow: '0 20px 40px rgba(15, 23, 42, 0.1)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: '0 32px 64px rgba(15, 23, 42, 0.15)',
+              },
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: 'info.main',
+                    color: 'white',
+                  }}
+                >
+                  <AccountBalance fontSize="small" />
+                </Box>
+                <Typography variant="h6" fontWeight={700} sx={{ color: 'info.main' }}>
+                  Bank Details
+                </Typography>
+              </Box>
+
+              {/* Create Bank Account Section */}
+              <Box sx={{ mb: 3, p: 2, borderRadius: 2, bgcolor: 'grey.50', border: '1px solid', borderColor: 'grey.200' }}>
+                <Typography variant="subtitle1" fontWeight={600} gutterBottom sx={{ color: 'primary.main' }}>
+                  Create Bank Account
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                  <TextField
+                    label="Account Holder Name"
+                    value={bankDetailsForm.accountHolderName}
+                    onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, accountHolderName: e.target.value })}
+                    fullWidth
+                    size="small"
+                    required
+                  />
+                  <TextField
+                    label="Bank Name"
+                    value={bankDetailsForm.bankName}
+                    onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, bankName: e.target.value })}
+                    fullWidth
+                    size="small"
+                    required
+                  />
+                  <TextField
+                    label="Sort Code"
+                    value={bankDetailsForm.sortCode}
+                    onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, sortCode: e.target.value })}
+                    fullWidth
+                    size="small"
+                    required
+                  />
+                  <TextField
+                    label="Account Number"
+                    value={bankDetailsForm.accountNumber}
+                    onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, accountNumber: e.target.value })}
+                    fullWidth
+                    size="small"
+                    required
+                  />
+                  <TextField
+                    label="Bank Address"
+                    value={bankDetailsForm.bankAddress}
+                    onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, bankAddress: e.target.value })}
+                    fullWidth
+                    multiline
+                    rows={3}
+                    size="small"
+                    required
+                  />
+                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => setBankDetailsForm({
+                        accountHolderName: '',
+                        bankName: '',
+                        sortCode: '',
+                        accountNumber: '',
+                        bankAddress: '',
+                      })}
+                    >
+                      Clear
+                    </Button>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={handleSaveBankDetails}
+                      disabled={!bankDetailsForm.accountHolderName || !bankDetailsForm.bankName || !bankDetailsForm.sortCode || !bankDetailsForm.accountNumber || !bankDetailsForm.bankAddress}
+                    >
+                      Create Bank Details
+                    </Button>
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Existing Bank Details Display */}
+              {bankDetailsLoading ? (
+                <Typography variant="body2" color="text.secondary">
+                  Loading bank details...
+                </Typography>
+              ) : bankDetails ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Typography variant="subtitle1" fontWeight={600} sx={{ color: 'success.main' }}>
+                      Current Bank Details
+                    </Typography>
+                    <Box sx={{ ml: 'auto' }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={handleOpenBankDetailsDialog}
+                        sx={{ mr: 1 }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        color="error"
+                        onClick={handleDeleteBankDetails}
+                      >
+                        Delete
+                      </Button>
+                    </Box>
+                  </Box>
+                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'success.50', transition: 'all 0.2s ease', '&:hover': { bgcolor: 'success.100' } }}>
+                    <Typography variant="body2" color="success.800" fontWeight={600}>
+                      Account Holder Name
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      {bankDetails.accountHolderName}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'success.50', transition: 'all 0.2s ease', '&:hover': { bgcolor: 'success.100' } }}>
+                    <Typography variant="body2" color="success.800" fontWeight={600}>
+                      Bank Name
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      {bankDetails.bankName}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'success.50', transition: 'all 0.2s ease', '&:hover': { bgcolor: 'success.100' } }}>
+                    <Typography variant="body2" color="success.800" fontWeight={600}>
+                      Sort Code
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      {bankDetails.sortCode}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'success.50', transition: 'all 0.2s ease', '&:hover': { bgcolor: 'success.100' } }}>
+                    <Typography variant="body2" color="success.800" fontWeight={600}>
+                      Account Number
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      {bankDetails.accountNumber}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'success.50', transition: 'all 0.2s ease', '&:hover': { bgcolor: 'success.100' } }}>
+                    <Typography variant="body2" color="success.800" fontWeight={600}>
+                      Bank Address
+                    </Typography>
+                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }} fontWeight={600}>
+                      {bankDetails.bankAddress}
+                    </Typography>
+                  </Box>
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No existing bank details. Use the form above to create bank details for this company.
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Box>
       </Box>
+
+      {/* Bank Details Dialog */}
+      <Dialog open={bankDetailsDialogOpen} onClose={handleCloseBankDetailsDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>{bankDetails ? 'Edit Bank Details' : 'Add Bank Details'}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <TextField
+              label="Account Holder Name"
+              value={bankDetailsForm.accountHolderName}
+              onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, accountHolderName: e.target.value })}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Bank Name"
+              value={bankDetailsForm.bankName}
+              onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, bankName: e.target.value })}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Sort Code"
+              value={bankDetailsForm.sortCode}
+              onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, sortCode: e.target.value })}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Account Number"
+              value={bankDetailsForm.accountNumber}
+              onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, accountNumber: e.target.value })}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Bank Address"
+              value={bankDetailsForm.bankAddress}
+              onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, bankAddress: e.target.value })}
+              fullWidth
+              multiline
+              rows={3}
+              required
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseBankDetailsDialog}>Cancel</Button>
+          <Button onClick={async () => {
+            if (!id) return;
+            try {
+              await propertiesService.updateBankDetails(parseInt(id, 10), bankDetailsForm);
+              setSnackbar({
+                open: true,
+                message: 'Bank details updated successfully',
+                severity: 'success',
+              });
+              setBankDetailsDialogOpen(false);
+              loadBankDetails();
+            } catch (error) {
+              setSnackbar({
+                open: true,
+                message: 'Failed to update bank details',
+                severity: 'error',
+              });
+            }
+          }} variant="contained">
+            Update
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbar.open}

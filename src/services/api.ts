@@ -1,4 +1,4 @@
-import { ApiError } from '../types';
+import type { ApiError } from '../types';
 
 interface RequestConfig extends RequestInit {
   requiresAuth?: boolean;

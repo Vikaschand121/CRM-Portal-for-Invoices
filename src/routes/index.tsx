@@ -21,6 +21,10 @@ import { ProtectedRoute } from '../components/ProtectedRoute';
 import { PublicRoute } from '../components/PublicRoute';
 import { Layout } from '../components/Layout';
 import CalendarPage from '../pages/calendar/CalendarPage';
+import InvoiceCreatePage from '../pages/invoices/InvoiceCreatePage';
+import InvoiceEditPage from '../pages/invoices/InvoiceEditPage';
+import { InvoiceViewPage } from '../pages/invoices/InvoiceViewPage';
+import { InvoiceDeletePage } from '../pages/invoices/InvoiceDeletePage';
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div>
@@ -67,6 +71,10 @@ export const AppRoutes = () => {
         <Route path="companies/:id" element={<CompanyDetailPage />} />
         <Route path="companies/:id/properties" element={<CompanyPropertiesPage />} />
         <Route path="companies/:companyId/properties/:propertyId" element={<PropertyDetailPage />} />
+        <Route path="companies/:companyId/properties/:propertyId/invoices/new" element={<InvoiceCreatePage />} />
+        <Route path="companies/:companyId/properties/:propertyId/invoices/:invoiceId" element={<InvoiceViewPage />} />
+        <Route path="companies/:companyId/properties/:propertyId/invoices/:invoiceId/edit" element={<InvoiceEditPage />} />
+        <Route path="companies/:companyId/properties/:propertyId/invoices/:invoiceId/delete" element={<InvoiceDeletePage />} />
         <Route path="companies/:companyId/properties/:propertyId/documents/:documentId" element={<DocumentViewerPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="legal" element={<LegalPage />} />

@@ -15,11 +15,13 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  FormControlLabel,
   Grid,
   IconButton,
   LinearProgress,
   Paper,
   Snackbar,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -48,7 +50,7 @@ import {
   TrendingUp,
   Visibility,
 } from '@mui/icons-material';
-import { Property, Tenant, Document, Invoice, CreateTenantPayload, CreateDocumentPayload, CreateInvoicePayload } from '../types';
+import { Property, Tenant, Document, Invoice, CreateTenantPayload, CreateDocumentPayload } from '../types';
 import { propertiesService } from '../services/properties.service';
 import { tenantsService } from '../services/tenants.service';
 import { documentsService } from '../services/documents.service';
@@ -114,20 +116,13 @@ export const PropertyDetailPage = () => {
     rentReviewDates: '',
     breakDate: '',
     lenderName: '',
+    isVatAvailable: false,
   });
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [documentForm, setDocumentForm] = useState<CreateDocumentPayload>({
     name: '',
     type: '',
     file: null as any,
-    propertyId: parseInt(propertyId || '0'),
-  });
-  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
-  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
-  const [invoiceForm, setInvoiceForm] = useState<CreateInvoicePayload>({
-    amount: 0,
-    date: '',
-    status: 'Pending',
     propertyId: parseInt(propertyId || '0'),
   });
 
@@ -235,6 +230,7 @@ export const PropertyDetailPage = () => {
       rentReviewDates: '',
       breakDate: '',
       lenderName: '',
+      isVatAvailable: false,
     });
     setTenantDialogOpen(true);
   };
@@ -249,6 +245,7 @@ export const PropertyDetailPage = () => {
       rentReviewDates: tenant.rentReviewDates,
       breakDate: tenant.breakDate,
       lenderName: tenant.lenderName,
+      isVatAvailable: tenant.isVatAvailable,
     });
     setTenantDialogOpen(true);
   };
@@ -317,53 +314,19 @@ export const PropertyDetailPage = () => {
 
   // Invoice handlers
   const handleAddInvoice = () => {
-    setEditingInvoice(null);
-    setInvoiceForm({
-      amount: 0,
-      date: '',
-      status: 'Pending',
-      propertyId: parseInt(propertyId || '0'),
-    });
-    setInvoiceDialogOpen(true);
+    navigate(`/companies/${companyId}/properties/${propertyId}/invoices/new`);
   };
 
-  const handleEditInvoice = (invoice: Invoice) => {
-    setEditingInvoice(invoice);
-    setInvoiceForm({
-      amount: invoice.amount,
-      date: invoice.date,
-      status: invoice.status,
-      propertyId: invoice.propertyId,
-    });
-    setInvoiceDialogOpen(true);
+  const handleViewInvoice = (invoiceId: number) => {
+    navigate(`/companies/${companyId}/properties/${propertyId}/invoices/${invoiceId}`);
   };
 
-  const handleDeleteInvoice = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this invoice?')) {
-      try {
-        await invoicesService.deleteInvoice(id);
-        showSnackbar('Invoice deleted successfully', 'success');
-        loadData();
-      } catch (err) {
-        showSnackbar('Failed to delete invoice', 'error');
-      }
-    }
+  const handleEditInvoice = (invoiceId: number) => {
+    navigate(`/companies/${companyId}/properties/${propertyId}/invoices/${invoiceId}/edit`);
   };
 
-  const handleSaveInvoice = async () => {
-    try {
-      if (editingInvoice) {
-        await invoicesService.updateInvoice(editingInvoice.id, invoiceForm);
-        showSnackbar('Invoice updated successfully', 'success');
-      } else {
-        await invoicesService.createInvoice(invoiceForm);
-        showSnackbar('Invoice created successfully', 'success');
-      }
-      setInvoiceDialogOpen(false);
-      loadData();
-    } catch (err) {
-      showSnackbar('Failed to save invoice', 'error');
-    }
+  const handleDeleteInvoice = (invoiceId: number) => {
+    navigate(`/companies/${companyId}/properties/${propertyId}/invoices/${invoiceId}/delete`);
   };
 
   if (loading) {
@@ -825,6 +788,7 @@ export const PropertyDetailPage = () => {
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Rent Review Dates</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Break Date</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Lender Name</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>VAT Available</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -837,6 +801,7 @@ export const PropertyDetailPage = () => {
                     <TableCell>{tenant.rentReviewDates}</TableCell>
                     <TableCell>{new Date(tenant.breakDate).toLocaleDateString()}</TableCell>
                     <TableCell>{tenant.lenderName}</TableCell>
+                    <TableCell>{tenant.isVatAvailable ? 'Yes' : 'No'}</TableCell>
                     <TableCell>
                       <IconButton onClick={() => handleEditTenant(tenant)}>
                         <Edit />
@@ -918,7 +883,10 @@ export const PropertyDetailPage = () => {
                     <TableCell>{new Date(invoice.date).toLocaleDateString()}</TableCell>
                     <TableCell>{invoice.status}</TableCell>
                     <TableCell>
-                      <IconButton onClick={() => handleEditInvoice(invoice)}>
+                      <IconButton onClick={() => handleViewInvoice(invoice.id)}>
+                        <Visibility />
+                      </IconButton>
+                      <IconButton onClick={() => handleEditInvoice(invoice.id)}>
                         <Edit />
                       </IconButton>
                       <IconButton onClick={() => handleDeleteInvoice(invoice.id)}>
@@ -981,6 +949,16 @@ export const PropertyDetailPage = () => {
               onChange={(e) => setTenantForm({ ...tenantForm, lenderName: e.target.value })}
               fullWidth
             />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={tenantForm.isVatAvailable}
+                  onChange={(e) => setTenantForm({ ...tenantForm, isVatAvailable: e.target.checked })}
+                  color="primary"
+                />
+              }
+              label="Is VAT Applicable"
+            />
           </Box>
         </DialogContent>
         <DialogActions>
@@ -1022,41 +1000,6 @@ export const PropertyDetailPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Invoice Dialog */}
-      <Dialog open={invoiceDialogOpen} onClose={() => setInvoiceDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>{editingInvoice ? 'Edit Invoice' : 'Add Invoice'}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Amount"
-              type="number"
-              value={invoiceForm.amount}
-              onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: Number(e.target.value) })}
-              fullWidth
-            />
-            <TextField
-              label="Date"
-              type="date"
-              value={invoiceForm.date}
-              onChange={(e) => setInvoiceForm({ ...invoiceForm, date: e.target.value })}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="Status"
-              value={invoiceForm.status}
-              onChange={(e) => setInvoiceForm({ ...invoiceForm, status: e.target.value })}
-              fullWidth
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setInvoiceDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSaveInvoice} variant="contained">
-            {editingInvoice ? 'Update' : 'Create'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Container>
   );
 };

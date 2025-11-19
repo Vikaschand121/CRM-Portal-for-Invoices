@@ -6,6 +6,10 @@ class InvoicesService {
     return api.get<Invoice[]>(`/invoices?propertyId=${propertyId}`);
   }
 
+  async getInvoice(id: number): Promise<Invoice> {
+    return api.get<Invoice>(`/invoices/${id}`);
+  }
+
   async createInvoice(payload: CreateInvoicePayload): Promise<Invoice> {
     return api.post<Invoice>('/invoices', payload);
   }
