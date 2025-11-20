@@ -1008,14 +1008,14 @@ export const PropertyDetailPage = () => {
             />
             <TextField
               label="Break Date"
-              type="date"
+              // type="date"
               value={tenantForm.breakDate}
               onChange={(e) => setTenantForm({ ...tenantForm, breakDate: e.target.value })}
               fullWidth
               InputLabelProps={{ shrink: true }}
-              required
-              error={tenantFormErrors.breakDate}
-              helperText={tenantFormErrors.breakDate ? "* required" : ""}
+              // required
+              // error={tenantFormErrors.breakDate}
+              // helperText={tenantFormErrors.breakDate ? "* required" : ""}
             />
             <TextField
               label="Lender Name"
