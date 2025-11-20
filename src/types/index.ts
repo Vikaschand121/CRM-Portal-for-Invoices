@@ -89,6 +89,7 @@ export interface Company {
   shareholding: string;
   confirmationStatementDue: string;
   accountsDue: string;
+  vatNumber: string;
   createdAt?: string;
   updatedAt?: string;
   status?: string;
@@ -110,6 +111,7 @@ export interface CreateCompanyPayload {
   shareholding: string;
   confirmationStatementDue: string;
   accountsDue: string;
+  vatNumber: string;
 }
 
 export interface UpdateCompanyPayload extends CreateCompanyPayload {}
@@ -158,9 +160,15 @@ export interface Tenant {
   leaseStartDate: string;
   leaseEndDate: string;
   rentReviewDates: string;
+  isReviewedDates: boolean;
+  isVatRegistered: boolean;
+  rentPaymentFrequency: string;
+  tenantEmail: string;
+  tenantContact: string;
+  tenantCorrespondingAddress: string;
   breakDate: string;
+  rentStartDate: string;
   lenderName: string;
-  // isVatAvailable: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -171,9 +179,15 @@ export interface CreateTenantPayload {
   leaseStartDate: string;
   leaseEndDate: string;
   rentReviewDates: string;
+  isReviewedDates: boolean;
+  isVatRegistered: boolean;
+  rentPaymentFrequency: string;
+  tenantEmail: string;
+  tenantContact: string;
+  tenantCorrespondingAddress: string;
   breakDate: string;
+  rentStartDate: string;
   lenderName: string;
-  // isVatAvailable: boolean;
 }
 
 export interface UpdateTenantPayload extends CreateTenantPayload {}

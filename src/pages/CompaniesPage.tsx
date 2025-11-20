@@ -52,6 +52,7 @@ const validationSchema = Yup.object({
   shareholding: Yup.string().required('Shareholding information is required'),
   confirmationStatementDue: Yup.string().required('Confirmation statement due date is required'),
   accountsDue: Yup.string().required('Accounts due date is required'),
+  vatNumber: Yup.string().required('VAT number is required'),
 });
 
 export const CompaniesPage = () => {
@@ -77,6 +78,7 @@ export const CompaniesPage = () => {
       shareholding: '',
       confirmationStatementDue: '',
       accountsDue: '',
+      vatNumber: '',
     },
     validationSchema,
     onSubmit: async (values: any) => {
@@ -123,6 +125,7 @@ export const CompaniesPage = () => {
       shareholding: company.shareholding,
       confirmationStatementDue: company.confirmationStatementDue,
       accountsDue: company.accountsDue,
+      vatNumber: company.vatNumber,
     });
     setDialogOpen(true);
   };
@@ -434,6 +437,16 @@ export const CompaniesPage = () => {
                 error={formik.touched.accountsDue && Boolean(formik.errors.accountsDue)}
                 helperText={formik.touched.accountsDue && typeof formik.errors.accountsDue === 'string' ? formik.errors.accountsDue : ''}
                 InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                fullWidth
+                id="vatNumber"
+                name="vatNumber"
+                label="VAT Number"
+                value={formik.values.vatNumber}
+                onChange={formik.handleChange}
+                error={formik.touched.vatNumber && Boolean(formik.errors.vatNumber)}
+                helperText={formik.touched.vatNumber && typeof formik.errors.vatNumber === 'string' ? formik.errors.vatNumber : ''}
               />
             </Box>
           </Box>

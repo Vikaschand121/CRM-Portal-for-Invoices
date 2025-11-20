@@ -321,6 +321,10 @@ export const CompanyDetailPage = () => {
       value: company.companyNumber,
     },
     {
+      label: 'VAT Number',
+      value: company.vatNumber,
+    },
+    {
       label: 'SIC Code',
       value: company.sicCode,
     },

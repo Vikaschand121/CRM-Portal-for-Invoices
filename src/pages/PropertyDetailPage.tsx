@@ -19,6 +19,7 @@ import {
   Grid,
   IconButton,
   LinearProgress,
+  MenuItem,
   Paper,
   Snackbar,
   Switch,
@@ -114,9 +115,15 @@ export const PropertyDetailPage = () => {
     leaseStartDate: '',
     leaseEndDate: '',
     rentReviewDates: '',
+    isReviewedDates: true,
+    isVatRegistered: false,
+    rentPaymentFrequency: 'MONTHLY',
+    tenantEmail: '',
+    tenantContact: '',
+    tenantCorrespondingAddress: '',
     breakDate: '',
+    rentStartDate: '',
     lenderName: '',
-    // isVatAvailable: false,
   });
   const [tenantFormErrors, setTenantFormErrors] = useState({
     tenantName: false,
@@ -236,9 +243,15 @@ export const PropertyDetailPage = () => {
       leaseStartDate: '',
       leaseEndDate: '',
       rentReviewDates: '',
+      isReviewedDates: true,
+      isVatRegistered: false,
+      rentPaymentFrequency: 'MONTHLY',
+      tenantEmail: '',
+      tenantContact: '',
+      tenantCorrespondingAddress: '',
       breakDate: '',
+      rentStartDate: '',
       lenderName: '',
-      // isVatAvailable: false,
     });
     setTenantFormErrors({
       tenantName: false,
@@ -259,9 +272,15 @@ export const PropertyDetailPage = () => {
       leaseStartDate: tenant.leaseStartDate,
       leaseEndDate: tenant.leaseEndDate,
       rentReviewDates: tenant.rentReviewDates,
+      isReviewedDates: tenant.isReviewedDates,
+      isVatRegistered: tenant.isVatRegistered,
+      rentPaymentFrequency: tenant.rentPaymentFrequency,
+      tenantEmail: tenant.tenantEmail,
+      tenantContact: tenant.tenantContact,
+      tenantCorrespondingAddress: tenant.tenantCorrespondingAddress,
       breakDate: tenant.breakDate,
+      rentStartDate: tenant.rentStartDate,
       lenderName: tenant.lenderName,
-      // isVatAvailable: tenant.isVatAvailable,
     });
     setTenantFormErrors({
       tenantName: false,
@@ -1007,16 +1026,67 @@ export const PropertyDetailPage = () => {
               // error={tenantFormErrors.lenderName}
               // helperText={tenantFormErrors.lenderName ? "* required" : ""}
             />
-            {/* <FormControlLabel
+            <TextField
+              label="Rent Payment Frequency"
+              select
+              value={tenantForm.rentPaymentFrequency}
+              onChange={(e) => setTenantForm({ ...tenantForm, rentPaymentFrequency: e.target.value })}
+              fullWidth
+              required
+            >
+              <MenuItem value="MONTHLY">Monthly</MenuItem>
+              <MenuItem value="QUARTERLY">Quarterly</MenuItem>
+              <MenuItem value="ANNUALLY">Annually</MenuItem>
+            </TextField>
+            <TextField
+              label="Tenant Email"
+              type="email"
+              value={tenantForm.tenantEmail}
+              onChange={(e) => setTenantForm({ ...tenantForm, tenantEmail: e.target.value })}
+              fullWidth
+            />
+            <TextField
+              label="Tenant Contact"
+              value={tenantForm.tenantContact}
+              onChange={(e) => setTenantForm({ ...tenantForm, tenantContact: e.target.value })}
+              fullWidth
+            />
+            <TextField
+              label="Tenant Corresponding Address"
+              value={tenantForm.tenantCorrespondingAddress}
+              onChange={(e) => setTenantForm({ ...tenantForm, tenantCorrespondingAddress: e.target.value })}
+              fullWidth
+              multiline
+              rows={3}
+            />
+            <TextField
+              label="Rent Start Date"
+              type="date"
+              value={tenantForm.rentStartDate}
+              onChange={(e) => setTenantForm({ ...tenantForm, rentStartDate: e.target.value })}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
+            <FormControlLabel
               control={
                 <Switch
-                  checked={tenantForm.isVatAvailable}
-                  onChange={(e) => setTenantForm({ ...tenantForm, isVatAvailable: e.target.checked })}
+                  checked={tenantForm.isReviewedDates}
+                  onChange={(e) => setTenantForm({ ...tenantForm, isReviewedDates: e.target.checked })}
                   color="primary"
                 />
               }
-              label="Is VAT Applicable"
-            /> */}
+              label="Is Reviewed Dates"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={tenantForm.isVatRegistered}
+                  onChange={(e) => setTenantForm({ ...tenantForm, isVatRegistered: e.target.checked })}
+                  color="primary"
+                />
+              }
+              label="Is VAT Registered"
+            />
           </Box>
         </DialogContent>
         <DialogActions>

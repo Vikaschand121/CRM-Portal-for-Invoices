@@ -16,7 +16,7 @@ import {
   Typography,
 } from '@mui/material';
 import { ArrowBack, Edit, Print, Save, Send } from '@mui/icons-material';
-import { Property, Tenant, Invoice } from '../../types';
+import { Property, Tenant, Invoice, BankDetails } from '../../types';
 import { propertiesService } from '../../services/properties.service';
 import { tenantsService } from '../../services/tenants.service';
 import { invoicesService } from '../../services/invoices.service';
@@ -60,14 +60,6 @@ const BILLING_OPTIONS: { value: BillingFrequency; label: string; months: number 
   { value: 'quarterly', label: 'Quarterly (3 Months)', months: 3 },
 ];
 
-const BANK_DETAILS = {
-  accountName: 'Prime Investments Holdings',
-  bankName: 'Barclays Bank PLC',
-  sortCode: '20-45-78',
-  accountNumber: '60986543',
-  iban: 'GB29 BARC 2045 7860 9865 43',
-  swift: 'BARCGB22',
-};
 
 const iso = (value: Date | string) => {
   const date = value instanceof Date ? value : new Date(value);
@@ -128,13 +120,14 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
 
   const [property, setProperty] = useState<Property | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
   const [form, setForm] = useState<InvoiceFormState | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const currentTenant = useMemo(
-    () => tenants.find((tenant) => tenant.id === form?.tenantId ?? -1),
+    () => tenants.find((tenant) => tenant.id === form?.tenantId),
     [tenants, form?.tenantId]
   );
 
@@ -154,6 +147,14 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
           propertiesService.getProperties(),
           tenantsService.getTenants(numericPropertyId),
         ]);
+
+        let bankDetailsData: BankDetails | null = null;
+        try {
+          bankDetailsData = await propertiesService.getBankDetails(numericCompanyId);
+        } catch (err) {
+          console.warn('Failed to fetch bank details:', err);
+          // Bank details are optional, continue without them
+        }
         if (cancelled) return;
 
         const foundProperty = properties.find((p) => p.id === numericPropertyId);
@@ -162,6 +163,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
         }
         setProperty(foundProperty);
         setTenants(tenantList);
+        setBankDetails(bankDetailsData);
 
         if (mode === 'edit' && numericInvoiceId) {
           const existingInvoices = await invoicesService.getInvoices(numericPropertyId);
@@ -269,29 +271,37 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
   };
 
   const handleSave = async (nextStatus: string) => {
-    if (!form || saving) return;
+    if (!form || saving || !property) return;
     try {
       setSaving(true);
 
       const payload = {
-        amount: form.totalAmount,
-        date: form.invoiceDate,
-        status: nextStatus,
-        propertyId: form.propertyId,
-        meta: {
-          invoiceNumber: form.invoiceNumber,
-          invoiceType: form.invoiceType,
-          billingFrequency: form.billingFrequency,
-          rentalPeriodStart: form.rentalPeriodStart,
-          rentalPeriodEnd: form.rentalPeriodEnd,
-          tenantId: form.tenantId,
-          companyId: form.companyId,
-          netAmount: form.netAmount,
-          vatAmount: form.vatAmount,
-          totalAmount: form.totalAmount,
-          notes: form.notes,
-          bankDetails: BANK_DETAILS,
-        },
+        tenantId: form.tenantId,
+        invoiceName: INVOICE_TYPES.find((type) => type.value === form.invoiceType)?.label ?? 'Invoice',
+        invoiceType: form.invoiceType === 'rental' ? 'Rent' : form.invoiceType,
+        invoiceNumber: form.invoiceNumber,
+        invoiceDate: form.invoiceDate,
+        terms: 'Due on Receipt',
+        dueDate: form.invoiceDate,
+        companyName: property.company?.name || '',
+        companyAddress: property.company?.registeredAddress || '',
+        companyContactDetails: '', // This would need to be added to company data
+        billToName: currentTenant ? `${currentTenant.tenantName} - The Enterprise` : '',
+        billToAddress: '', // This would need to be added to tenant data
+        propertyAddress: property.propertyAddress,
+        rentalPeriodStart: form.rentalPeriodStart,
+        rentalPeriodEnd: form.rentalPeriodEnd,
+        netAmount: form.netAmount,
+        vatAmount: form.vatAmount,
+        vatRate: VAT_RATE,
+        totalAmount: form.totalAmount,
+        paymentMade: 0,
+        notes: form.notes,
+        bankAccountName: bankDetails?.accountHolderName || '',
+        bankName: bankDetails?.bankName || '',
+        bankSortCode: bankDetails?.sortCode || '',
+        bankAccountNumber: bankDetails?.accountNumber || '',
+        bankAddress: bankDetails?.bankAddress || '',
       } as any; // TODO: extend backend/CreateInvoicePayload to avoid casting.
 
       if (mode === 'edit' && numericInvoiceId) {
@@ -370,6 +380,9 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Company No: {property.company?.companyNumber}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              VAT No: {property.company?.vatNumber}
             </Typography>
           </Box>
         </Box>
@@ -471,17 +484,16 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
           Bank Details
         </Typography>
         <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            <BankLine label="Account Name" value={BANK_DETAILS.accountName} />
-            <BankLine label="Bank" value={BANK_DETAILS.bankName} />
-            <BankLine label="Sort Code" value={BANK_DETAILS.sortCode} />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <BankLine label="Account Number" value={BANK_DETAILS.accountNumber} />
-            <BankLine label="IBAN" value={BANK_DETAILS.iban} />
-            <BankLine label="SWIFT" value={BANK_DETAILS.swift} />
-          </Grid>
-        </Grid>
+           <Grid item xs={12} md={6}>
+             <BankLine label="Account Name" value={bankDetails?.accountHolderName || 'Not available'} />
+             <BankLine label="Bank" value={bankDetails?.bankName || 'Not available'} />
+             <BankLine label="Sort Code" value={bankDetails?.sortCode || 'Not available'} />
+           </Grid>
+           <Grid item xs={12} md={6}>
+             <BankLine label="Account Number" value={bankDetails?.accountNumber || 'Not available'} />
+             <BankLine label="Bank Address" value={bankDetails?.bankAddress || 'Not available'} />
+           </Grid>
+         </Grid>
       </Paper>
     </Container>
   );
