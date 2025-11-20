@@ -3,7 +3,7 @@ import { Tenant, CreateTenantPayload, UpdateTenantPayload } from '../types';
 
 class TenantsService {
   async getTenants(propertyId: number): Promise<Tenant[]> {
-    return api.get<Tenant[]>(`/property-management/tenants?propertyId=${propertyId}`);
+    return api.get<Tenant[]>(`/property-management/tenants/property/${propertyId}`);
   }
 
   async createTenant(payload: CreateTenantPayload): Promise<Tenant> {
