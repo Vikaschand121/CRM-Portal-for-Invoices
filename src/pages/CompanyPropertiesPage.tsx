@@ -39,8 +39,8 @@ import {
   HomeWork,
   LocationOn,
   MonetizationOn,
-  MoreVert,
-  People,
+  // MoreVert,
+  // People,
   TrendingUp,
 } from '@mui/icons-material';
 import { Company, Property, CreatePropertyPayload, UpdatePropertyPayload } from '../types';
