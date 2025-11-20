@@ -885,35 +885,84 @@ export const PropertyDetailPage = () => {
               Upload Document
             </Button>
           </Box>
-          <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
-            <Table>
-              <TableHead sx={{ bgcolor: 'secondary.main' }}>
-                <TableRow>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Name</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Type</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Uploaded</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {documents.map((doc) => (
-                  <TableRow key={doc.id}>
-                    <TableCell>{doc.name}</TableCell>
-                    <TableCell>{doc.type}</TableCell>
-                    <TableCell>{new Date(doc.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <IconButton onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}/documents/${doc.id}`)}>
-                        <Visibility />
-                      </IconButton>
-                      <IconButton onClick={() => handleDeleteDocument(doc.id)}>
-                        <Delete />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: 'repeat(1, 1fr)',
+                sm: 'repeat(2, 1fr)',
+                md: 'repeat(3, 1fr)',
+                lg: 'repeat(4, 1fr)'
+              },
+              gap: { xs: 2, sm: 2.5 },
+            }}
+          >
+            {documents.map((doc) => (
+              <Card
+                key={doc.id}
+                sx={{
+                  borderRadius: 4,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.1)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 32px 64px rgba(15, 23, 42, 0.15)',
+                  },
+                }}
+              >
+                <CardContent sx={{ p: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                    <Box
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: 'secondary.main',
+                        color: 'white',
+                      }}
+                    >
+                      <Description fontSize="small" />
+                    </Box>
+                    <Typography variant="h6" fontWeight={700} sx={{ color: 'secondary.main' }}>
+                      {doc.name}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'secondary.50', transition: 'all 0.2s ease', '&:hover': { bgcolor: 'secondary.100' } }}>
+                      <Typography variant="body2" color="secondary.800" fontWeight={600}>
+                        Type
+                      </Typography>
+                      <Typography variant="body1" fontWeight={600}>
+                        {doc.type}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'secondary.50', transition: 'all 0.2s ease', '&:hover': { bgcolor: 'secondary.100' } }}>
+                      <Typography variant="body2" color="secondary.800" fontWeight={600}>
+                        Uploaded
+                      </Typography>
+                      <Typography variant="body1" fontWeight={600}>
+                        {new Date(doc.createdAt).toLocaleDateString()}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                    <IconButton onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}/documents/${doc.id}`)} sx={{ color: 'primary.main' }}>
+                      <Visibility />
+                    </IconButton>
+                    <IconButton onClick={() => handleDeleteDocument(doc.id)} sx={{ color: 'error.main' }}>
+                      <Delete />
+                    </IconButton>
+                  </Box>
+                </CardContent>
+              </Card>
+            ))}
+          </Box>
         </Box>
       )}
 

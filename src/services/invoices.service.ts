@@ -3,7 +3,7 @@ import { Invoice, CreateInvoicePayload } from '../types';
 
 class InvoicesService {
   async getInvoices(propertyId: number): Promise<Invoice[]> {
-    return api.get<Invoice[]>(`/invoices?propertyId=${propertyId}`);
+    return api.get<Invoice[]>(`/property-management/invoices/property/${propertyId}`);
   }
 
   async getInvoice(id: number): Promise<Invoice> {
@@ -11,7 +11,7 @@ class InvoicesService {
   }
 
   async createInvoice(payload: CreateInvoicePayload): Promise<Invoice> {
-    return api.post<Invoice>('/invoices', payload);
+    return api.post<Invoice>('/property-management/invoices', payload);
   }
 
   async updateInvoice(id: number, payload: CreateInvoicePayload): Promise<Invoice> {

@@ -60,6 +60,15 @@ const BILLING_OPTIONS: { value: BillingFrequency; label: string; months: number 
   { value: 'quarterly', label: 'Quarterly (3 Months)', months: 3 },
 ];
 
+const INVOICE_TYPE_ABBREVIATIONS: Record<InvoiceType, string> = {
+  rental: 'RI',
+  service_charge: 'SC',
+  maintenance: 'MA',
+  insurance: 'IN',
+  rents_deposit: 'RD',
+  other: 'OT',
+};
+
 
 const iso = (value: Date | string) => {
   const date = value instanceof Date ? value : new Date(value);
@@ -85,10 +94,46 @@ const formatDate = (value?: string) => {
   return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+const generateInvoiceNumber = (
+  propertyName: string,
+  tenantName: string,
+  invoiceType: InvoiceType,
+  existingInvoices: Invoice[]
+): string => {
+  // Shorten property name to 2 characters
+  const propertyAbbrev = propertyName.replace(/\s+/g, '').substring(0, 2).toUpperCase();
+
+  // Shorten tenant name to 3 characters
+  const tenantAbbrev = tenantName.replace(/\s+/g, '').substring(0, 3).toUpperCase();
+
+  // Get invoice type abbreviation
+  const typeAbbrev = INVOICE_TYPE_ABBREVIATIONS[invoiceType];
+
+  // Find existing invoices with the same pattern
+  const pattern = new RegExp(`^${propertyAbbrev}/${tenantAbbrev}/${typeAbbrev}/(\\d{3})$`);
+  const matchingNumbers: number[] = [];
+
+  existingInvoices.forEach(invoice => {
+    const invoiceNumber = (invoice as any).invoiceNumber || invoice.id.toString();
+    const match = invoiceNumber.match(pattern);
+    if (match) {
+      matchingNumbers.push(parseInt(match[1], 10));
+    }
+  });
+
+  // Get the next number
+  const nextNumber = matchingNumbers.length > 0 ? Math.max(...matchingNumbers) + 1 : 1;
+
+  // Format as 3-digit number
+  const formattedNumber = nextNumber.toString().padStart(3, '0');
+
+  return `${propertyAbbrev}/${tenantAbbrev}/${typeAbbrev}/${formattedNumber}`;
+};
+
 const buildInitialForm = (propertyId: number, companyId: number | null, tenantId: number | null): InvoiceFormState => {
   const today = iso(new Date());
   return {
-    invoiceNumber: `INV-${propertyId}-${Date.now().toString().slice(-4)}`,
+    invoiceNumber: `TEMP-${propertyId}-${Date.now().toString().slice(-4)}`, // Temporary, will be updated
     invoiceType: 'rental',
     billingFrequency: 'monthly',
     invoiceDate: today,
@@ -121,6 +166,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
   const [property, setProperty] = useState<Property | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
+  const [existingInvoices, setExistingInvoices] = useState<Invoice[]>([]);
   const [form, setForm] = useState<InvoiceFormState | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -143,9 +189,10 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
 
       try {
         setLoading(true);
-        const [properties, tenantList] = await Promise.all([
+        const [properties, tenantList, invoiceList] = await Promise.all([
           propertiesService.getProperties(),
           tenantsService.getTenants(numericPropertyId),
+          invoicesService.getInvoices(numericPropertyId),
         ]);
 
         let bankDetailsData: BankDetails | null = null;
@@ -164,6 +211,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
         setProperty(foundProperty);
         setTenants(tenantList);
         setBankDetails(bankDetailsData);
+        setExistingInvoices(invoiceList);
 
         if (mode === 'edit' && numericInvoiceId) {
           const existingInvoices = await invoicesService.getInvoices(numericPropertyId);
@@ -194,11 +242,12 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
           }
         } else {
           setForm(buildInitialForm(numericPropertyId, foundProperty.company?.id ?? numericCompanyId, tenantList[0]?.id ?? null));
-          // Auto-generate notes for new invoices after a short delay to ensure data is loaded
+          // Auto-generate notes and invoice number for new invoices after a short delay to ensure data is loaded
           setTimeout(() => {
             if (form) {
               const notes = generateNotes();
               updateForm({ notes });
+              updateInvoiceNumber();
             }
           }, 500);
         }
@@ -217,6 +266,17 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
 
   const updateForm = (patch: Partial<InvoiceFormState>) => {
     setForm((prev) => (prev ? { ...prev, ...patch } : prev));
+  };
+
+  const updateInvoiceNumber = () => {
+    if (!form || !property || !currentTenant) return;
+    const newNumber = generateInvoiceNumber(
+      property.propertyName,
+      currentTenant.tenantName,
+      form.invoiceType,
+      existingInvoices
+    );
+    updateForm({ invoiceNumber: newNumber });
   };
 
   const handleFrequencyChange = (value: BillingFrequency) => {
@@ -287,7 +347,7 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
         companyAddress: property.company?.registeredAddress || '',
         companyContactDetails: '', // This would need to be added to company data
         billToName: currentTenant ? `${currentTenant.tenantName} - The Enterprise` : '',
-        billToAddress: '', // This would need to be added to tenant data
+        billToAddress: currentTenant?.tenantCorrespondingAddress || '',
         propertyAddress: property.propertyAddress,
         rentalPeriodStart: form.rentalPeriodStart,
         rentalPeriodEnd: form.rentalPeriodEnd,
@@ -391,7 +451,7 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
 
         <Grid container spacing={3}>
           <Grid item xs={12} md={4}>
-            <TextField select label="Invoice Type" value={form.invoiceType} fullWidth onChange={(e) => updateForm({ invoiceType: e.target.value as InvoiceType })}>
+            <TextField select label="Invoice Type" value={form.invoiceType} fullWidth onChange={(e) => { updateForm({ invoiceType: e.target.value as InvoiceType }); setTimeout(updateInvoiceNumber, 100); }}>
               {INVOICE_TYPES.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.label}
@@ -407,7 +467,7 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <TextField select label="Billed To (Tenant)" value={form.tenantId ?? ''} fullWidth onChange={(e) => updateForm({ tenantId: Number(e.target.value) })}>
+            <TextField select label="Billed To (Tenant)" value={form.tenantId ?? ''} fullWidth onChange={(e) => { updateForm({ tenantId: Number(e.target.value) }); setTimeout(updateInvoiceNumber, 100); }}>
               {tenants.map((tenant) => (
                 <MenuItem key={tenant.id} value={tenant.id}>
                   {tenant.tenantName}

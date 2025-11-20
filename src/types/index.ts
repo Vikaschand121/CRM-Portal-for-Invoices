@@ -220,10 +220,33 @@ export interface Invoice {
 }
 
 export interface CreateInvoicePayload {
-  amount: number;
-  date: string;
-  status: string;
+  tenantId: number;
   propertyId: number;
+  invoiceName: string;
+  invoiceType: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  terms: string;
+  dueDate: string;
+  companyName: string;
+  companyAddress: string;
+  companyContactDetails: string;
+  billToName: string;
+  billToAddress: string;
+  propertyAddress: string;
+  rentalPeriodStart: string;
+  rentalPeriodEnd: string;
+  netAmount: number;
+  vatAmount: number;
+  vatRate: number;
+  totalAmount: number;
+  paymentMade: number;
+  notes: string;
+  bankAccountName: string;
+  bankName: string;
+  bankSortCode: string;
+  bankAccountNumber: string;
+  bankAddress: string;
 }
 
 export interface BankDetails {
