@@ -153,6 +153,8 @@ export interface Meeting {
   userIds?: number[];
 }
 
+export type RentPaymentFrequency = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+
 export interface Tenant {
   id: number;
   tenantName: string;
@@ -162,7 +164,7 @@ export interface Tenant {
   rentReviewDates: string;
   isReviewedDates: boolean;
   isVatRegistered: boolean;
-  rentPaymentFrequency: string;
+  rentPaymentFrequency: RentPaymentFrequency;
   tenantEmail: string;
   tenantContact: string;
   tenantCorrespondingAddress: string;
@@ -181,7 +183,7 @@ export interface CreateTenantPayload {
   rentReviewDates: string;
   isReviewedDates: boolean;
   isVatRegistered: boolean;
-  rentPaymentFrequency: string;
+  rentPaymentFrequency: RentPaymentFrequency;
   tenantEmail: string;
   tenantContact: string;
   tenantCorrespondingAddress: string;

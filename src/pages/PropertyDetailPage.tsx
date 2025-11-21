@@ -51,7 +51,7 @@ import {
   TrendingUp,
   Visibility,
 } from '@mui/icons-material';
-import { Property, Tenant, Document, Invoice, CreateTenantPayload, CreateDocumentPayload } from '../types';
+import { Property, Tenant, Document, Invoice, CreateTenantPayload, CreateDocumentPayload, RentPaymentFrequency } from '../types';
 import { propertiesService } from '../services/properties.service';
 import { tenantsService } from '../services/tenants.service';
 import { documentsService } from '../services/documents.service';
@@ -72,6 +72,12 @@ const formatCurrency = (value?: number): string => {
   }
   return GBP_FORMATTER.format(value);
 };
+
+const RENT_PAYMENT_FREQUENCY_OPTIONS: { value: RentPaymentFrequency; label: string }[] = [
+  { value: 'MONTHLY', label: 'Monthly' },
+  { value: 'QUARTERLY', label: 'Quarterly' },
+  { value: 'YEARLY', label: 'Annually' },
+];
 
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
   <Box
@@ -117,7 +123,7 @@ export const PropertyDetailPage = () => {
     rentReviewDates: '',
     isReviewedDates: true,
     isVatRegistered: false,
-    rentPaymentFrequency: 'MONTHLY',
+    rentPaymentFrequency: 'MONTHLY' as RentPaymentFrequency,
     tenantEmail: '',
     tenantContact: '',
     tenantCorrespondingAddress: '',
@@ -245,7 +251,7 @@ export const PropertyDetailPage = () => {
       rentReviewDates: '',
       isReviewedDates: true,
       isVatRegistered: false,
-      rentPaymentFrequency: 'MONTHLY',
+      rentPaymentFrequency: 'MONTHLY' as RentPaymentFrequency,
       tenantEmail: '',
       tenantContact: '',
       tenantCorrespondingAddress: '',
@@ -1079,13 +1085,15 @@ export const PropertyDetailPage = () => {
               label="Rent Payment Frequency"
               select
               value={tenantForm.rentPaymentFrequency}
-              onChange={(e) => setTenantForm({ ...tenantForm, rentPaymentFrequency: e.target.value })}
+              onChange={(e) => setTenantForm({ ...tenantForm, rentPaymentFrequency: e.target.value as RentPaymentFrequency })}
               fullWidth
               required
             >
-              <MenuItem value="MONTHLY">Monthly</MenuItem>
-              <MenuItem value="QUARTERLY">Quarterly</MenuItem>
-              <MenuItem value="ANNUALLY">Annually</MenuItem>
+              {RENT_PAYMENT_FREQUENCY_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
             </TextField>
             <TextField
               label="Tenant Email"
