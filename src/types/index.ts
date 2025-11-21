@@ -213,10 +213,36 @@ export interface CreateDocumentPayload {
 
 export interface Invoice {
   id: number;
-  amount: number;
-  date: string;
-  status: string;
+  invoiceName: string;
+  invoiceType: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string;
+  terms: string;
+  companyName: string;
+  companyAddress: string;
+  companyContactDetails: string;
+  billToName: string;
+  billToAddress: string;
+  propertyAddress: string;
   propertyId: number;
+  rentalPeriodStart: string;
+  rentalPeriodEnd: string;
+  netAmount: number;
+  vatAmount: number;
+  vatRate: number;
+  totalAmount: number;
+  paymentMade: number;
+  notes: string;
+  bankAccountName: string;
+  bankName: string;
+  bankSortCode: string;
+  bankAccountNumber: string;
+  bankAddress: string;
+  filePath: string;
+  fileUrl: string;
+  tenantId: number;
+  tenantName: string;
   createdAt: string;
   updatedAt: string;
 }

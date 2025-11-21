@@ -42,6 +42,8 @@ interface InvoiceFormState {
   totalAmount: number;
   status: string;
   notes: string;
+  billToName: string;
+  billToAddress: string;
 }
 
 const VAT_RATE = 0.2;
@@ -147,6 +149,8 @@ const buildInitialForm = (propertyId: number, companyId: number | null, tenantId
     totalAmount: 0,
     status: 'Draft',
     notes: '',
+    billToName: '',
+    billToAddress: '',
   };
 };
 
@@ -218,20 +222,22 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
           const target = existingInvoices.find((inv) => inv.id === numericInvoiceId);
           if (!target) throw new Error('Invoice not found');
           setForm({
-            invoiceNumber: target.invoiceNumber || target.id.toString(),
-            invoiceType: (target as any).invoiceType ?? 'rental',
-            billingFrequency: (target as any).billingFrequency ?? 'monthly',
-            invoiceDate: target.date ?? target.createdAt,
-            rentalPeriodStart: (target as any).rentalPeriodStart ?? target.date,
-            rentalPeriodEnd: (target as any).rentalPeriodEnd ?? target.date,
-            tenantId: (target as any).tenantId ?? tenantList[0]?.id ?? null,
+            invoiceNumber: target.invoiceNumber,
+            invoiceType: target.invoiceType === 'Rent' ? 'rental' : 'other', // Map back
+            billingFrequency: 'monthly', // Default, since not in response
+            invoiceDate: target.invoiceDate,
+            rentalPeriodStart: target.rentalPeriodStart,
+            rentalPeriodEnd: target.rentalPeriodEnd,
+            tenantId: target.tenantId,
             companyId: foundProperty.company?.id ?? numericCompanyId,
             propertyId: numericPropertyId,
-            netAmount: (target as any).netAmount ?? target.amount,
-            vatAmount: (target as any).vatAmount ?? target.amount * VAT_RATE,
-            totalAmount: (target as any).totalAmount ?? target.amount * (1 + VAT_RATE),
-            status: target.status,
-            notes: (target as any).notes ?? '',
+            netAmount: target.netAmount,
+            vatAmount: target.vatAmount,
+            totalAmount: target.totalAmount,
+            status: 'Draft', // Default, since not in response
+            notes: target.notes,
+            billToName: target.billToName,
+            billToAddress: target.billToAddress,
           });
           // Auto-generate notes for existing invoices if they don't have notes
           if (!(target as any).notes) {
@@ -332,6 +338,17 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
 
   const handleSave = async (nextStatus: string) => {
     if (!form || saving || !property) return;
+
+    // Validation
+    if (!form.billToName.trim()) {
+      showSnackbar('Bill to name cannot be empty', 'error');
+      return;
+    }
+    if (!form.billToAddress.trim()) {
+      showSnackbar('Bill to address cannot be empty', 'error');
+      return;
+    }
+
     try {
       setSaving(true);
 
@@ -346,8 +363,8 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
         companyName: property.company?.name || '',
         companyAddress: property.company?.registeredAddress || '',
         companyContactDetails: '', // This would need to be added to company data
-        billToName: currentTenant ? `${currentTenant.tenantName} - The Enterprise` : '',
-        billToAddress: currentTenant?.tenantCorrespondingAddress || '',
+        billToName: form.billToName,
+        billToAddress: form.billToAddress,
         propertyAddress: property.propertyAddress,
         rentalPeriodStart: form.rentalPeriodStart,
         rentalPeriodEnd: form.rentalPeriodEnd,
@@ -467,7 +484,7 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <TextField select label="Billed To (Tenant)" value={form.tenantId ?? ''} fullWidth onChange={(e) => { updateForm({ tenantId: Number(e.target.value) }); setTimeout(updateInvoiceNumber, 100); }}>
+            <TextField select label="Billed To (Tenant)" value={form.tenantId ?? ''} fullWidth onChange={(e) => { const tenantId = Number(e.target.value); updateForm({ tenantId }); setTimeout(() => { const tenant = tenants.find(t => t.id === tenantId); if (tenant) updateForm({ billToName: `${tenant.tenantName} - The Enterprise`, billToAddress: tenant.tenantCorrespondingAddress }); updateInvoiceNumber(); }, 100); }}>
               {tenants.map((tenant) => (
                 <MenuItem key={tenant.id} value={tenant.id}>
                   {tenant.tenantName}

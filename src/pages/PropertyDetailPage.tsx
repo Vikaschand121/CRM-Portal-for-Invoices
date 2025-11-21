@@ -202,26 +202,8 @@ export const PropertyDetailPage = () => {
             updatedAt: '2024-02-15T00:00:00.000Z',
           },
         ]);
-        setInvoices([
-          {
-            id: 1,
-            amount: 1200,
-            date: '2024-01-01',
-            status: 'Paid',
-            propertyId: parseInt(propertyId),
-            createdAt: '2024-01-01T00:00:00.000Z',
-            updatedAt: '2024-01-01T00:00:00.000Z',
-          },
-          {
-            id: 2,
-            amount: 1200,
-            date: '2024-02-01',
-            status: 'Pending',
-            propertyId: parseInt(propertyId),
-            createdAt: '2024-02-01T00:00:00.000Z',
-            updatedAt: '2024-02-01T00:00:00.000Z',
-          },
-        ]);
+        const invoiceData = await invoicesService.getInvoices(parseInt(propertyId));
+        setInvoices(invoiceData);
       } else {
         setError('Property not found');
       }
@@ -984,18 +966,18 @@ export const PropertyDetailPage = () => {
             <Table>
               <TableHead sx={{ bgcolor: 'success.main' }}>
                 <TableRow>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Amount</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Date</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Status</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Invoice Number</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Invoice Date</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Total Amount</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {invoices.map((invoice) => (
                   <TableRow key={invoice.id}>
-                    <TableCell>{formatCurrency(invoice.amount)}</TableCell>
-                    <TableCell>{new Date(invoice.date).toLocaleDateString()}</TableCell>
-                    <TableCell>{invoice.status}</TableCell>
+                    <TableCell>{invoice.invoiceNumber}</TableCell>
+                    <TableCell>{new Date(invoice.invoiceDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{formatCurrency(invoice.totalAmount)}</TableCell>
                     <TableCell>
                       <IconButton onClick={() => handleViewInvoice(invoice.id)}>
                         <Visibility />

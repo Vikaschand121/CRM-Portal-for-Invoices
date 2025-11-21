@@ -109,13 +109,13 @@ export const InvoiceDeletePage = () => {
             <strong>Invoice ID:</strong> {invoice.id}
           </Typography>
           <Typography variant="body2">
-            <strong>Amount:</strong> £{invoice.amount.toFixed(2)}
+            <strong>Amount:</strong> £{invoice.totalAmount.toFixed(2)}
           </Typography>
           <Typography variant="body2">
-            <strong>Status:</strong> {invoice.status}
+            <strong>Invoice Number:</strong> {invoice.invoiceNumber}
           </Typography>
           <Typography variant="body2">
-            <strong>Date:</strong> {new Date(invoice.date).toLocaleDateString()}
+            <strong>Date:</strong> {new Date(invoice.invoiceDate).toLocaleDateString()}
           </Typography>
         </Box>
 

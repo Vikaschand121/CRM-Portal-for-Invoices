@@ -73,7 +73,7 @@ export const InvoiceViewPage = () => {
         }
         setProperty(foundProperty);
 
-        const foundTenant = tenants.find((t) => t.id === (invoiceData as any).meta?.tenantId);
+        const foundTenant = tenants.find((t) => t.id === invoiceData.tenantId);
         setTenant(foundTenant || null);
 
         setInvoice(invoiceData);
@@ -123,9 +123,6 @@ export const InvoiceViewPage = () => {
     );
   }
 
-  const meta = (invoice as any).meta || {};
-  const bankDetails = meta.bankDetails || {};
-
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={2} sx={{ mb: 3 }}>
@@ -133,7 +130,6 @@ export const InvoiceViewPage = () => {
           Back to Property
         </Button>
         <Stack direction="row" spacing={1}>
-          <Chip label={invoice.status} color={invoice.status === 'Paid' ? 'success' : invoice.status === 'Overdue' ? 'error' : 'info'} />
           <Button variant="outlined" startIcon={<Edit />} onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}/invoices/${invoiceId}/edit`)}>
             Edit Invoice
           </Button>
@@ -150,9 +146,9 @@ export const InvoiceViewPage = () => {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
           <Box>
             <Typography variant="h4" fontWeight={700}>
-              {meta.invoiceType ? `${meta.invoiceType.charAt(0).toUpperCase() + meta.invoiceType.slice(1)} Invoice` : 'Invoice'}
+              {invoice.invoiceType ? `${invoice.invoiceType.charAt(0).toUpperCase() + invoice.invoiceType.slice(1)} Invoice` : 'Invoice'}
             </Typography>
-            <Typography color="text.secondary">Invoice #{meta.invoiceNumber || invoice.id}</Typography>
+            <Typography color="text.secondary">Invoice #{invoice.invoiceNumber}</Typography>
           </Box>
           <Box textAlign="right">
             <Typography variant="h6">{property.company?.name}</Typography>
@@ -174,19 +170,19 @@ export const InvoiceViewPage = () => {
             </Typography>
             <Box sx={{ mb: 2 }}>
               <Typography variant="body2" color="text.secondary">Invoice Type</Typography>
-              <Typography>{meta.invoiceType || 'N/A'}</Typography>
+              <Typography>{invoice.invoiceType || 'N/A'}</Typography>
             </Box>
             <Box sx={{ mb: 2 }}>
               <Typography variant="body2" color="text.secondary">Invoice Date</Typography>
-              <Typography>{formatDate(invoice.date)}</Typography>
+              <Typography>{formatDate(invoice.invoiceDate)}</Typography>
             </Box>
             <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" color="text.secondary">Billing Frequency</Typography>
-              <Typography>{meta.billingFrequency || 'N/A'}</Typography>
+              <Typography variant="body2" color="text.secondary">Due Date</Typography>
+              <Typography>{formatDate(invoice.dueDate)}</Typography>
             </Box>
             <Box sx={{ mb: 2 }}>
               <Typography variant="body2" color="text.secondary">Rental Period</Typography>
-              <Typography>{formatDate(meta.rentalPeriodStart)} - {formatDate(meta.rentalPeriodEnd)}</Typography>
+              <Typography>{formatDate(invoice.rentalPeriodStart)} - {formatDate(invoice.rentalPeriodEnd)}</Typography>
             </Box>
           </Grid>
 
@@ -196,15 +192,15 @@ export const InvoiceViewPage = () => {
             </Typography>
             <Box sx={{ mb: 2 }}>
               <Typography variant="body2" color="text.secondary">Tenant</Typography>
-              <Typography>{tenant?.tenantName || 'N/A'}</Typography>
+              <Typography>{invoice.tenantName || 'N/A'}</Typography>
+            </Box>
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">Bill To Address</Typography>
+              <Typography>{invoice.billToAddress}</Typography>
             </Box>
             <Box sx={{ mb: 2 }}>
               <Typography variant="body2" color="text.secondary">Property Address</Typography>
               <Typography>{property.propertyAddress}</Typography>
-            </Box>
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" color="text.secondary">Lease Period</Typography>
-              <Typography>{tenant ? `${formatDate(tenant.leaseStartDate)} - ${formatDate(tenant.leaseEndDate)}` : 'N/A'}</Typography>
             </Box>
           </Grid>
 
@@ -216,30 +212,30 @@ export const InvoiceViewPage = () => {
               <Grid item xs={12} md={4}>
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body2" color="text.secondary">Net Amount</Typography>
-                  <Typography variant="h6">£{meta.netAmount?.toFixed(2) || invoice.amount.toFixed(2)}</Typography>
+                  <Typography variant="h6">£{invoice.netAmount.toFixed(2)}</Typography>
                 </Box>
               </Grid>
               <Grid item xs={12} md={4}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" color="text.secondary">VAT (20%)</Typography>
-                  <Typography variant="h6">£{meta.vatAmount?.toFixed(2) || (invoice.amount * 0.2).toFixed(2)}</Typography>
+                  <Typography variant="body2" color="text.secondary">VAT ({invoice.vatRate * 100}%)</Typography>
+                  <Typography variant="h6">£{invoice.vatAmount.toFixed(2)}</Typography>
                 </Box>
               </Grid>
               <Grid item xs={12} md={4}>
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body2" color="text.secondary">Total Amount</Typography>
-                  <Typography variant="h6" fontWeight={700}>£{meta.totalAmount?.toFixed(2) || invoice.amount.toFixed(2)}</Typography>
+                  <Typography variant="h6" fontWeight={700}>£{invoice.totalAmount.toFixed(2)}</Typography>
                 </Box>
               </Grid>
             </Grid>
           </Grid>
 
-          {meta.notes && (
+          {invoice.notes && (
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom>
                 Notes
               </Typography>
-              <Typography>{meta.notes}</Typography>
+              <Typography>{invoice.notes}</Typography>
             </Grid>
           )}
         </Grid>
@@ -251,14 +247,13 @@ export const InvoiceViewPage = () => {
         </Typography>
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
-            <BankLine label="Account Name" value={bankDetails.accountName || 'N/A'} />
-            <BankLine label="Bank" value={bankDetails.bankName || 'N/A'} />
-            <BankLine label="Sort Code" value={bankDetails.sortCode || 'N/A'} />
+            <BankLine label="Account Name" value={invoice.bankAccountName || 'N/A'} />
+            <BankLine label="Bank" value={invoice.bankName || 'N/A'} />
+            <BankLine label="Sort Code" value={invoice.bankSortCode || 'N/A'} />
           </Grid>
           <Grid item xs={12} md={6}>
-            <BankLine label="Account Number" value={bankDetails.accountNumber || 'N/A'} />
-            <BankLine label="IBAN" value={bankDetails.iban || 'N/A'} />
-            <BankLine label="SWIFT" value={bankDetails.swift || 'N/A'} />
+            <BankLine label="Account Number" value={invoice.bankAccountNumber || 'N/A'} />
+            <BankLine label="Bank Address" value={invoice.bankAddress || 'N/A'} />
           </Grid>
         </Grid>
       </Paper>

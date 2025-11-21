@@ -7,7 +7,7 @@ class InvoicesService {
   }
 
   async getInvoice(id: number): Promise<Invoice> {
-    return api.get<Invoice>(`/invoices/${id}`);
+    return api.get<Invoice>(`/property-management/invoices/${id}`);
   }
 
   async createInvoice(payload: CreateInvoicePayload): Promise<Invoice> {
@@ -15,11 +15,11 @@ class InvoicesService {
   }
 
   async updateInvoice(id: number, payload: CreateInvoicePayload): Promise<Invoice> {
-    return api.patch<Invoice>(`/invoices/${id}`, payload);
+    return api.patch<Invoice>(`/property-management/invoices/${id}`, payload);
   }
 
   async deleteInvoice(id: number): Promise<void> {
-    return api.delete<void>(`/invoices/${id}`);
+    return api.delete<void>(`/property-management/invoices/${id}`);
   }
 }
 
