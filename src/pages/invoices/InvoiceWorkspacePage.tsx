@@ -171,6 +171,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
   const [form, setForm] = useState<InvoiceFormState | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const currentTenant = useMemo(
@@ -244,10 +245,11 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             }, 500);
           }
         } else {
+          const initialTenantId = tenantList[0]?.id ?? null;
           const initialForm = buildInitialForm(
             numericPropertyId,
             foundProperty.company?.id ?? numericCompanyId,
-            tenantList[0]?.id ?? null
+            initialTenantId
           );
           const initialNumber = generateInvoiceNumber(
             foundProperty.propertyAddress,
@@ -255,7 +257,15 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             initialForm.invoiceType,
             invoiceList
           );
-          setForm({ ...initialForm, invoiceNumber: initialNumber });
+          const formWithTenant = { ...initialForm, invoiceNumber: initialNumber };
+          if (initialTenantId) {
+            const tenant = tenantList.find((t) => t.id === initialTenantId);
+            if (tenant) {
+              formWithTenant.billToName = `${tenant.tenantName} - The Enterprise`;
+              formWithTenant.billToAddress = tenant.tenantCorrespondingAddress ?? '';
+            }
+          }
+          setForm(formWithTenant);
         }
       } catch (err: any) {
         if (!cancelled) setError(err?.message ?? 'Failed to load invoice data');
@@ -325,8 +335,29 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
     updateForm({ notes });
   };
 
+  const resolveInvoiceType = (invoiceType: InvoiceType): string => {
+    switch (invoiceType) {
+      case 'rental':
+        return 'Rent';
+      case 'service_charge':
+        return 'Service Charge';
+      case 'maintenance':
+        return 'Maintenance';
+      case 'insurance':
+        return 'Insurance';
+      case 'rents_deposit':
+        return 'Rent Deposit';
+      default:
+        return 'Other';
+    }
+  };
+
   const handleSave = async (nextStatus: string) => {
-    if (!form || saving || !property) return;
+    console.log('handleSave called with status:', nextStatus);
+    if (!form || saving || !property) {
+      console.log('handleSave early return: form?', !!form, 'saving?', saving, 'property?', !!property);
+      return;
+    }
 
     // Validation
     if (!form.tenantId) {
@@ -345,17 +376,25 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
     try {
       setSaving(true);
 
+      const resolvedInvoiceType = resolveInvoiceType(form.invoiceType);
+      const vatRateValue = form.netAmount ? form.vatAmount / form.netAmount : 0;
+      const companyContactDetails =
+        property.company?.name && property.company?.registeredAddress
+          ? `Company: ${property.company.name}\nAddress: ${property.company.registeredAddress}`
+          : '';
+
       const payload = {
         tenantId: form.tenantId,
+        propertyId: form.propertyId,
         invoiceName: INVOICE_TYPES.find((type) => type.value === form.invoiceType)?.label ?? 'Invoice',
-        invoiceType: form.invoiceType === 'rental' ? 'Rent' : form.invoiceType,
+        invoiceType: resolvedInvoiceType,
         invoiceNumber: form.invoiceNumber,
         invoiceDate: form.invoiceDate,
         terms: 'Due on Receipt',
         dueDate: form.invoiceDate,
         companyName: property.company?.name || '',
         companyAddress: property.company?.registeredAddress || '',
-        companyContactDetails: '', // This would need to be added to company data
+        companyContactDetails,
         billToName: form.billToName,
         billToAddress: form.billToAddress,
         propertyAddress: property.propertyAddress,
@@ -363,7 +402,7 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
         rentalPeriodEnd: form.rentalPeriodEnd,
         netAmount: form.netAmount,
         vatAmount: form.vatAmount,
-        vatRate: VAT_RATE,
+        vatRate: vatRateValue,
         totalAmount: form.totalAmount,
         paymentMade: 0,
         notes: form.notes,
@@ -375,14 +414,24 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
       } as any; // TODO: extend backend/CreateInvoicePayload to avoid casting.
 
       if (mode === 'edit' && numericInvoiceId) {
+        console.log('Updating invoice with ID:', numericInvoiceId);
+        console.log('Update payload:', payload);
         await invoicesService.updateInvoice(numericInvoiceId, payload);
+        console.log('Invoice updated successfully');
         showSnackbar('Invoice updated successfully', 'success');
+        setSubmitted(true);
+        setTimeout(() => navigate(`/companies/${companyId}/properties/${propertyId}`), 1000);
       } else {
+        console.log('Creating new invoice');
+        console.log('Create payload:', payload);
         await invoicesService.createInvoice(payload);
+        console.log('Invoice created successfully');
         showSnackbar('Invoice created successfully', 'success');
+        setSubmitted(true);
+        setTimeout(() => navigate(`/companies/${companyId}/properties/${propertyId}`), 1000);
       }
-      navigate(`/companies/${companyId}/properties/${propertyId}`);
     } catch (err) {
+      console.error('Failed to save invoice:', err);
       showSnackbar('Failed to save invoice', 'error');
     } finally {
       setSaving(false);
@@ -417,22 +466,15 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
           Back to Property
         </Button>
         <Stack direction="row" spacing={1}>
-          <Chip label={form.status} color={form.status === 'Paid' ? 'success' : form.status === 'Overdue' ? 'error' : 'info'} />
-          <Button variant="outlined" startIcon={<Save />} disabled={saving} onClick={() => handleSave('Draft')}>
-            Save Draft
-          </Button>
-          <Button variant="contained" startIcon={<Send />} disabled={saving} onClick={() => handleSave('Issued')}>
-            Issue Invoice
-          </Button>
-          {mode === 'edit' && (
-            <Button variant="outlined" startIcon={<Edit />} onClick={() => navigate('')}>
-              Edit Details
-            </Button>
-          )}
-          <Button variant="outlined" startIcon={<Print />} onClick={handlePrint}>
-            Print / PDF
-          </Button>
-        </Stack>
+           <Button variant="contained" startIcon={saving || submitted ? <CircularProgress size={20} /> : <Send />} disabled={saving || submitted} onClick={() => handleSave('Issued')}>
+             {submitted ? 'Submitted' : saving ? 'Submitting...' : 'Issue Invoice'}
+           </Button>
+           {mode === 'edit' && (
+             <Button variant="outlined" startIcon={<Edit />} onClick={() => navigate('')}>
+               Edit Details
+             </Button>
+           )}
+         </Stack>
       </Stack>
 
       <Paper elevation={4} sx={{ p: 4, bgcolor: 'background.paper', width: '100%', minHeight: '1120px' /* A4 feel */ }}>

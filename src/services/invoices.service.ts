@@ -15,7 +15,10 @@ class InvoicesService {
   }
 
   async updateInvoice(id: number, payload: CreateInvoicePayload): Promise<Invoice> {
-    return api.patch<Invoice>(`/property-management/invoices/${id}`, payload);
+    console.log('InvoicesService: Updating invoice', id, 'with payload:', payload);
+    const result = await api.patch<Invoice>(`/property-management/invoices/${id}`, payload);
+    console.log('InvoicesService: Update result:', result);
+    return result;
   }
 
   async deleteInvoice(id: number): Promise<void> {
