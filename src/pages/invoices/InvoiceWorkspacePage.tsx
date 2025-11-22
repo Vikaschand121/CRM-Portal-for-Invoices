@@ -96,26 +96,26 @@ const formatDate = (value?: string) => {
   return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+const abbreviate = (value: string, length: number, fallback: string) => {
+  const cleaned = (value || '').replace(/[^A-Za-z]/g, '').toUpperCase();
+  const base = cleaned || fallback;
+  return base.substring(0, length).padEnd(length, fallback.substring(0, length));
+};
+
 const generateInvoiceNumber = (
-  propertyName: string,
+  propertyAddress: string,
   tenantName: string,
   invoiceType: InvoiceType,
   existingInvoices: Invoice[]
 ): string => {
-  // Shorten property name to 2 characters
-  const propertyAbbrev = propertyName.replace(/\s+/g, '').substring(0, 2).toUpperCase();
-
-  // Shorten tenant name to 3 characters
-  const tenantAbbrev = tenantName.replace(/\s+/g, '').substring(0, 3).toUpperCase();
-
-  // Get invoice type abbreviation
+  const propertyAbbrev = abbreviate(propertyAddress, 2, 'PR');
+  const tenantAbbrev = abbreviate(tenantName, 3, 'TEN');
   const typeAbbrev = INVOICE_TYPE_ABBREVIATIONS[invoiceType];
 
-  // Find existing invoices with the same pattern
   const pattern = new RegExp(`^${propertyAbbrev}/${tenantAbbrev}/${typeAbbrev}/(\\d{3})$`);
   const matchingNumbers: number[] = [];
 
-  existingInvoices.forEach(invoice => {
+  existingInvoices.forEach((invoice) => {
     const invoiceNumber = (invoice as any).invoiceNumber || invoice.id.toString();
     const match = invoiceNumber.match(pattern);
     if (match) {
@@ -123,10 +123,7 @@ const generateInvoiceNumber = (
     }
   });
 
-  // Get the next number
   const nextNumber = matchingNumbers.length > 0 ? Math.max(...matchingNumbers) + 1 : 1;
-
-  // Format as 3-digit number
   const formattedNumber = nextNumber.toString().padStart(3, '0');
 
   return `${propertyAbbrev}/${tenantAbbrev}/${typeAbbrev}/${formattedNumber}`;
@@ -247,15 +244,18 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             }, 500);
           }
         } else {
-          setForm(buildInitialForm(numericPropertyId, foundProperty.company?.id ?? numericCompanyId, tenantList[0]?.id ?? null));
-          // Auto-generate notes and invoice number for new invoices after a short delay to ensure data is loaded
-          setTimeout(() => {
-            if (form) {
-              const notes = generateNotes();
-              updateForm({ notes });
-              updateInvoiceNumber();
-            }
-          }, 500);
+          const initialForm = buildInitialForm(
+            numericPropertyId,
+            foundProperty.company?.id ?? numericCompanyId,
+            tenantList[0]?.id ?? null
+          );
+          const initialNumber = generateInvoiceNumber(
+            foundProperty.propertyAddress,
+            tenantList[0]?.tenantName ?? '',
+            initialForm.invoiceType,
+            invoiceList
+          );
+          setForm({ ...initialForm, invoiceNumber: initialNumber });
         }
       } catch (err: any) {
         if (!cancelled) setError(err?.message ?? 'Failed to load invoice data');
@@ -272,17 +272,6 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
 
   const updateForm = (patch: Partial<InvoiceFormState>) => {
     setForm((prev) => (prev ? { ...prev, ...patch } : prev));
-  };
-
-  const updateInvoiceNumber = () => {
-    if (!form || !property || !currentTenant) return;
-    const newNumber = generateInvoiceNumber(
-      property.propertyName,
-      currentTenant.tenantName,
-      form.invoiceType,
-      existingInvoices
-    );
-    updateForm({ invoiceNumber: newNumber });
   };
 
   const handleFrequencyChange = (value: BillingFrequency) => {
@@ -340,6 +329,10 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
     if (!form || saving || !property) return;
 
     // Validation
+    if (!form.tenantId) {
+      showSnackbar('Please select a tenant', 'error');
+      return;
+    }
     if (!form.billToName.trim()) {
       showSnackbar('Bill to name cannot be empty', 'error');
       return;
@@ -468,7 +461,27 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
 
         <Grid container spacing={3}>
           <Grid item xs={12} md={4}>
-            <TextField select label="Invoice Type" value={form.invoiceType} fullWidth onChange={(e) => { updateForm({ invoiceType: e.target.value as InvoiceType }); setTimeout(updateInvoiceNumber, 100); }}>
+            <TextField
+              select
+              label="Invoice Type"
+              value={form.invoiceType}
+              fullWidth
+              onChange={(e) => {
+                const invoiceType = e.target.value as InvoiceType;
+                setForm((prev) => {
+                  if (!prev) return prev;
+                  const tenant = tenants.find((t) => t.id === prev.tenantId);
+                  const next = { ...prev, invoiceType };
+                  next.invoiceNumber = generateInvoiceNumber(
+                    property?.propertyAddress ?? '',
+                    tenant?.tenantName ?? '',
+                    invoiceType,
+                    existingInvoices
+                  );
+                  return next;
+                });
+              }}
+            >
               {INVOICE_TYPES.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.label}
@@ -480,11 +493,44 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
             <TextField label="Invoice Number" value={form.invoiceNumber} onChange={(e) => updateForm({ invoiceNumber: e.target.value })} fullWidth />
           </Grid>
           <Grid item xs={12} md={4}>
-            <TextField label="Invoice Date" type="date" value={form.invoiceDate} onChange={(e) => updateForm({ invoiceDate: e.target.value })} fullWidth InputLabelProps={{ shrink: true }} />
+            <TextField
+              label="Invoice Date"
+              type="date"
+              value={form.invoiceDate}
+              onChange={(e) => updateForm({ invoiceDate: e.target.value })}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <TextField select label="Billed To (Tenant)" value={form.tenantId ?? ''} fullWidth onChange={(e) => { const tenantId = Number(e.target.value); updateForm({ tenantId }); setTimeout(() => { const tenant = tenants.find(t => t.id === tenantId); if (tenant) updateForm({ billToName: `${tenant.tenantName} - The Enterprise`, billToAddress: tenant.tenantCorrespondingAddress }); updateInvoiceNumber(); }, 100); }}>
+            <TextField
+              select
+              label="Billed To (Tenant)"
+              value={form.tenantId ?? ''}
+              fullWidth
+              required
+              onChange={(e) => {
+                const tenantId = Number(e.target.value);
+                const tenant = tenants.find((t) => t.id === tenantId);
+                setForm((prev) => {
+                  if (!prev) return prev;
+                  const invoiceNumber = generateInvoiceNumber(
+                    property?.propertyAddress ?? '',
+                    tenant?.tenantName ?? '',
+                    prev.invoiceType,
+                    existingInvoices
+                  );
+                  return {
+                    ...prev,
+                    tenantId,
+                    billToName: tenant ? `${tenant.tenantName} - The Enterprise` : prev.billToName,
+                    billToAddress: tenant?.tenantCorrespondingAddress ?? prev.billToAddress,
+                    invoiceNumber,
+                  };
+                });
+              }}
+            >
               {tenants.map((tenant) => (
                 <MenuItem key={tenant.id} value={tenant.id}>
                   {tenant.tenantName}
