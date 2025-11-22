@@ -140,6 +140,8 @@ export const PropertyDetailPage = () => {
     lenderName: false,
   });
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
+  const [deleteDocumentId, setDeleteDocumentId] = useState<number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [documentForm, setDocumentForm] = useState<CreateDocumentPayload>({
     documentName: '',
     documentType: '',
@@ -302,15 +304,16 @@ export const PropertyDetailPage = () => {
     setDocumentDialogOpen(true);
   };
 
-  const handleDeleteDocument = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this document?')) {
-      try {
-        await documentsService.deleteDocument(id);
-        showSnackbar('Document deleted successfully', 'success');
-        loadData();
-      } catch (err) {
-        showSnackbar('Failed to delete document', 'error');
-      }
+  const handleDeleteDocument = async () => {
+    if (!deleteDocumentId) return;
+    try {
+      await documentsService.deleteDocument(deleteDocumentId);
+      showSnackbar('Document deleted successfully', 'success');
+      setDeleteDialogOpen(false);
+      setDeleteDocumentId(null);
+      loadData();
+    } catch (err) {
+      showSnackbar('Failed to delete document', 'error');
     }
   };
 
@@ -920,6 +923,9 @@ export const PropertyDetailPage = () => {
                     </Box>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                    <IconButton onClick={() => { setDeleteDocumentId(doc.id); setDeleteDialogOpen(true); }} sx={{ color: 'error.main' }}>
+                      <Delete />
+                    </IconButton>
                     <IconButton onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}/documents/${doc.id}`)} sx={{ color: 'primary.main' }}>
                       <Visibility />
                     </IconButton>
@@ -1174,6 +1180,20 @@ export const PropertyDetailPage = () => {
           <Button onClick={() => setDocumentDialogOpen(false)}>Cancel</Button>
           <Button onClick={handleSaveDocument} variant="contained">
             Upload
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Document Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Delete Document</DialogTitle>
+        <DialogContent>
+          <Typography>Are you sure you want to delete this document? This action cannot be undone.</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleDeleteDocument} variant="contained" color="error">
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

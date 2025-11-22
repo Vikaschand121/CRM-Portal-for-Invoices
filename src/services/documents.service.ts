@@ -54,7 +54,7 @@ class DocumentsService {
   }
 
   async deleteDocument(id: number): Promise<void> {
-    return api.delete<void>(`/documents/${id}`);
+    return api.delete<void>(`/property-management/documents/${id}`);
   }
 }
 

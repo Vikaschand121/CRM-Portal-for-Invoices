@@ -80,6 +80,9 @@ const iso = (value: Date | string) => {
 
 const periodEnd = (start: string, freq: BillingFrequency) => {
   if (!start) return '';
+  if (freq === 'quarterly') {
+    return currentQuarter.end;
+  }
   const base = new Date(start);
   if (Number.isNaN(base.getTime())) return '';
   const months = BILLING_OPTIONS.find((option) => option.value === freq)?.months ?? 1;
@@ -95,6 +98,36 @@ const formatDate = (value?: string) => {
   if (Number.isNaN(parsed.getTime())) return '--';
   return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 };
+
+const getQuarterDates = (dateStr: string) => {
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return { start: '', end: '' };
+  const year = date.getFullYear();
+  const month = date.getMonth(); // 0-11
+  const day = date.getDate();
+
+  let start: string, end: string;
+  if ((month === 2 && day >= 25) || month === 3 || month === 4 || (month === 5 && day <= 23)) {
+    // Q1: Mar 25 - Jun 23
+    start = `${year}-03-25`;
+    end = `${year}-06-23`;
+  } else if ((month === 5 && day >= 24) || month === 6 || month === 7 || (month === 8 && day <= 28)) {
+    // Q2: Jun 24 - Sep 28
+    start = `${year}-06-24`;
+    end = `${year}-09-28`;
+  } else if ((month === 8 && day >= 29) || month === 9 || month === 10 || (month === 11 && day <= 24)) {
+    // Q3: Sep 29 - Dec 24
+    start = `${year}-09-29`;
+    end = `${year}-12-24`;
+  } else {
+    // Q4: Dec 25 - Mar 24 next year
+    start = `${year}-12-25`;
+    end = `${year + 1}-03-24`;
+  }
+  return { start, end };
+};
+
+const currentQuarter = getQuarterDates(iso(new Date()));
 
 const abbreviate = (value: string, length: number, fallback: string) => {
   const cleaned = (value || '').replace(/[^A-Za-z]/g, '').toUpperCase();
@@ -286,7 +319,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
 
   const handleFrequencyChange = (value: BillingFrequency) => {
     if (!form) return;
-    const newEnd = periodEnd(form.rentalPeriodStart, value);
+    const newEnd = value === 'quarterly' ? currentQuarter.end : periodEnd(form.rentalPeriodStart, value);
     updateForm({ billingFrequency: value, rentalPeriodEnd: newEnd });
     // Auto-generate notes when billing frequency changes
     setTimeout(() => handleRentalPeriodChange(), 100);
@@ -294,7 +327,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
 
   const handleRentalStartChange = (value: string) => {
     if (!form) return;
-    const newEnd = periodEnd(value, form.billingFrequency);
+    const newEnd = form.billingFrequency === 'quarterly' ? currentQuarter.end : periodEnd(value, form.billingFrequency);
     updateForm({ rentalPeriodStart: value, rentalPeriodEnd: newEnd });
     // Auto-generate notes when rental period changes
     setTimeout(() => handleRentalPeriodChange(), 100);
@@ -315,14 +348,15 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
     const startDate = new Date(form.rentalPeriodStart);
     const endDate = new Date(form.rentalPeriodEnd);
     const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    const rentPerDay = form.netAmount / 365; // Assuming annual rent
+    const annualRent = form.netAmount * 10; // Adjust for correct annual rent amount
+    const rentPerDay = annualRent / 365;
     const totalRentDue = rentPerDay * daysDiff;
 
     const companyName = property.company?.name || 'Company';
     const tenantName = currentTenant?.tenantName || 'Tenant';
     const leaseStartDate = currentTenant ? new Date(currentTenant.leaseStartDate).toLocaleDateString('en-GB') : 'N/A';
 
-    return `${daysDiff} days between ${startDate.toLocaleDateString('en-GB')} to ${endDate.toLocaleDateString('en-GB')}. Rent per day is £${form.netAmount.toFixed(2)}/365 = £${rentPerDay.toFixed(2)}. Rent due for ${daysDiff} days is £${rentPerDay.toFixed(2)} * ${daysDiff} = £${totalRentDue.toFixed(2)}.
+    return `The rental period is ${daysDiff} days from ${startDate.toLocaleDateString('en-GB')} to ${endDate.toLocaleDateString('en-GB')}. Annual rent is £${annualRent.toFixed(2)}, giving a daily rate of £${rentPerDay.toFixed(2)}. Rent due for ${daysDiff} days is £${totalRentDue.toFixed(2)}.
 
 Lease agreed between ${companyName} and ${tenantName} on ${leaseStartDate} with The Enterprise.
 
@@ -603,7 +637,18 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
             </TextField>
           </Grid>
           <Grid item xs={12} md={4}>
-            <TextField label="Rental Period Start" type="date" value={form.rentalPeriodStart} onChange={(e) => handleRentalStartChange(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} />
+            <TextField
+              label="Rental Period Start"
+              type="date"
+              value={form.rentalPeriodStart}
+              onChange={(e) => handleRentalStartChange(e.target.value)}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              inputProps={{
+                min: form.billingFrequency === 'quarterly' ? currentQuarter.start : undefined,
+                max: form.billingFrequency === 'quarterly' ? currentQuarter.end : undefined,
+              }}
+            />
           </Grid>
           <Grid item xs={12} md={4}>
             <TextField label="Rental Period End" type="date" value={form.rentalPeriodEnd} fullWidth InputLabelProps={{ shrink: true }} disabled />
