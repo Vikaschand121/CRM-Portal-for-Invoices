@@ -56,7 +56,7 @@ export const Layout = () => {
             aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: { xs: 1, sm: 2 }, display: { md: 'none' } }}
+            sx={{ mr: { xs: 1, sm: 2 }, display: { lg: 'none' } }}
           >
             <MenuIcon />
           </IconButton>
@@ -160,7 +160,7 @@ export const Layout = () => {
           flexGrow: 1,
           p: { xs: 1, sm: 2, md: 3 },
           mt: { xs: 7, sm: 8 },
-          ml: { md: '280px' },
+          ml: { lg: '280px' },
           transition: theme.transitions.create(['margin', 'width'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
