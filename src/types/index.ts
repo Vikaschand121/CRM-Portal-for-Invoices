@@ -171,6 +171,7 @@ export interface Tenant {
   breakDate: string;
   rentStartDate: string;
   lenderName: string;
+  aggreedAnnualRent?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -190,6 +191,7 @@ export interface CreateTenantPayload {
   breakDate: string;
   rentStartDate: string;
   lenderName: string;
+  aggreedAnnualRent?: string;
 }
 
 export interface UpdateTenantPayload extends CreateTenantPayload {}

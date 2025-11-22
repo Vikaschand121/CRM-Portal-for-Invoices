@@ -130,6 +130,7 @@ export const PropertyDetailPage = () => {
     breakDate: '',
     rentStartDate: '',
     lenderName: '',
+    aggreedAnnualRent: undefined,
   });
   const [tenantFormErrors, setTenantFormErrors] = useState({
     tenantName: false,
@@ -207,6 +208,7 @@ export const PropertyDetailPage = () => {
       breakDate: '',
       rentStartDate: '',
       lenderName: '',
+      aggreedAnnualRent: undefined,
     });
     setTenantFormErrors({
       tenantName: false,
@@ -236,6 +238,7 @@ export const PropertyDetailPage = () => {
       breakDate: tenant.breakDate,
       rentStartDate: tenant.rentStartDate,
       lenderName: tenant.lenderName,
+      aggreedAnnualRent: tenant.aggreedAnnualRent,
     });
     setTenantFormErrors({
       tenantName: false,
@@ -817,7 +820,7 @@ export const PropertyDetailPage = () => {
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Lease End Date</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Rent Review Dates</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Break Date</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Lender Name</TableCell>
+                  {/* <TableCell sx={{ color: 'white', fontWeight: 600 }}>Lender Name</TableCell> */}
                   {/* <TableCell sx={{ color: 'white', fontWeight: 600 }}>VAT Available</TableCell> */}
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
                 </TableRow>
@@ -1037,7 +1040,7 @@ export const PropertyDetailPage = () => {
               // error={tenantFormErrors.breakDate}
               // helperText={tenantFormErrors.breakDate ? "* required" : ""}
             />
-            <TextField
+            {/* <TextField
               label="Lender Name"
               value={tenantForm.lenderName}
               onChange={(e) => setTenantForm({ ...tenantForm, lenderName: e.target.value })}
@@ -1045,6 +1048,13 @@ export const PropertyDetailPage = () => {
               // required
               // error={tenantFormErrors.lenderName}
               // helperText={tenantFormErrors.lenderName ? "* required" : ""}
+            /> */}
+            <TextField
+              label="Agreed Annual Rent"
+              value={tenantForm.aggreedAnnualRent || ''}
+              onChange={(e) => setTenantForm({ ...tenantForm, aggreedAnnualRent: e.target.value || undefined })}
+              fullWidth
+              InputProps={{ startAdornment: <Typography sx={{ mr: 1 }}>£</Typography> }}
             />
             <TextField
               label="Rent Payment Frequency"
