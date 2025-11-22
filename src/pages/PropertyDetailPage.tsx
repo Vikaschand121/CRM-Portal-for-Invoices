@@ -141,10 +141,11 @@ export const PropertyDetailPage = () => {
   });
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [documentForm, setDocumentForm] = useState<CreateDocumentPayload>({
-    name: '',
-    type: '',
-    file: null as any,
+    documentName: '',
+    documentType: '',
+    file: null,
     propertyId: parseInt(propertyId || '0'),
+    companyId: parseInt(companyId || '0'),
   });
 
   const loadData = async () => {
@@ -164,44 +165,8 @@ export const PropertyDetailPage = () => {
         // Load dynamic data
         const tenantData = await tenantsService.getTenants(parseInt(propertyId));
         setTenants(tenantData);
-        setDocuments([
-          {
-            id: 1,
-            name: 'Lease Agreement',
-            type: 'PDF',
-            url: '#',
-            propertyId: parseInt(propertyId),
-            createdAt: '2024-01-01T00:00:00.000Z',
-            updatedAt: '2024-01-01T00:00:00.000Z',
-          },
-          {
-            id: 2,
-            name: 'Lease Agreement Addendum 1',
-            type: 'PDF',
-            url: '#',
-            propertyId: parseInt(propertyId),
-            createdAt: '2024-01-15T00:00:00.000Z',
-            updatedAt: '2024-01-15T00:00:00.000Z',
-          },
-          {
-            id: 3,
-            name: 'Lease Agreement Addendum 2',
-            type: 'PDF',
-            url: '#',
-            propertyId: parseInt(propertyId),
-            createdAt: '2024-02-01T00:00:00.000Z',
-            updatedAt: '2024-02-01T00:00:00.000Z',
-          },
-          {
-            id: 4,
-            name: 'Property Insurance',
-            type: 'PDF',
-            url: '#',
-            propertyId: parseInt(propertyId),
-            createdAt: '2024-02-15T00:00:00.000Z',
-            updatedAt: '2024-02-15T00:00:00.000Z',
-          },
-        ]);
+        const documentData = await documentsService.getDocuments(parseInt(propertyId));
+        setDocuments(documentData);
         const invoiceData = await invoicesService.getInvoices(parseInt(propertyId));
         setInvoices(invoiceData);
       } else {
@@ -328,10 +293,11 @@ export const PropertyDetailPage = () => {
   // Document handlers
   const handleAddDocument = () => {
     setDocumentForm({
-      name: '',
-      type: '',
-      file: null as any,
+      documentName: '',
+      documentType: '',
+      file: null,
       propertyId: parseInt(propertyId || '0'),
+      companyId: parseInt(companyId || '0'),
     });
     setDocumentDialogOpen(true);
   };
@@ -349,6 +315,20 @@ export const PropertyDetailPage = () => {
   };
 
   const handleSaveDocument = async () => {
+    // Validation
+    if (!documentForm.documentName.trim()) {
+      showSnackbar('Document name is required', 'error');
+      return;
+    }
+    if (!documentForm.documentType.trim()) {
+      showSnackbar('Document type is required', 'error');
+      return;
+    }
+    if (!documentForm.file) {
+      showSnackbar('Please select a file to upload', 'error');
+      return;
+    }
+
     try {
       await documentsService.createDocument(documentForm);
       showSnackbar('Document uploaded successfully', 'success');
@@ -918,7 +898,7 @@ export const PropertyDetailPage = () => {
                       <Description fontSize="small" />
                     </Box>
                     <Typography variant="h6" fontWeight={700} sx={{ color: 'secondary.main' }}>
-                      {doc.name}
+                      {doc.documentName}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -927,7 +907,7 @@ export const PropertyDetailPage = () => {
                         Type
                       </Typography>
                       <Typography variant="body1" fontWeight={600}>
-                        {doc.type}
+                        {doc.documentType}
                       </Typography>
                     </Box>
                     <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'secondary.50', transition: 'all 0.2s ease', '&:hover': { bgcolor: 'secondary.100' } }}>
@@ -939,12 +919,9 @@ export const PropertyDetailPage = () => {
                       </Typography>
                     </Box>
                   </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
                     <IconButton onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}/documents/${doc.id}`)} sx={{ color: 'primary.main' }}>
                       <Visibility />
-                    </IconButton>
-                    <IconButton onClick={() => handleDeleteDocument(doc.id)} sx={{ color: 'error.main' }}>
-                      <Delete />
                     </IconButton>
                   </Box>
                 </CardContent>
@@ -1143,16 +1120,50 @@ export const PropertyDetailPage = () => {
           <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
               label="Document Name"
-              value={documentForm.name}
-              onChange={(e) => setDocumentForm({ ...documentForm, name: e.target.value })}
+              value={documentForm.documentName}
+              onChange={(e) => setDocumentForm({ ...documentForm, documentName: e.target.value })}
               fullWidth
+              required
             />
             <TextField
               label="Document Type"
-              value={documentForm.type}
-              onChange={(e) => setDocumentForm({ ...documentForm, type: e.target.value })}
+              value={documentForm.documentType}
+              onChange={(e) => setDocumentForm({ ...documentForm, documentType: e.target.value })}
               fullWidth
+              required
             />
+            <TextField
+              label="Tenant"
+              select
+              value={documentForm.tenantId ?? ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                setDocumentForm({ ...documentForm, tenantId: value === '' ? undefined : parseInt(value, 10) });
+              }}
+              fullWidth
+            >
+              {tenants.map((tenant) => (
+                <MenuItem key={tenant.id} value={tenant.id}>
+                  {tenant.tenantName}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label="Invoice"
+              select
+              value={documentForm.invoiceId ?? ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                setDocumentForm({ ...documentForm, invoiceId: value === '' ? undefined : parseInt(value, 10) });
+              }}
+              fullWidth
+            >
+              {invoices.map((invoice) => (
+                <MenuItem key={invoice.id} value={invoice.id}>
+                  {invoice.invoiceNumber}
+                </MenuItem>
+              ))}
+            </TextField>
             <input
               type="file"
               onChange={(e) => setDocumentForm({ ...documentForm, file: e.target.files?.[0] || null })}

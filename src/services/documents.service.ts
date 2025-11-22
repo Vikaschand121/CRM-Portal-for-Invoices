@@ -2,22 +2,55 @@ import { api } from './api';
 import { Document, CreateDocumentPayload } from '../types';
 
 class DocumentsService {
+  private normalizeDocument(doc: Document): Document {
+    const baseUrl = import.meta.env.VITE_API_URL || '';
+    const normalizedFileUrl =
+      doc.fileUrl && !doc.fileUrl.startsWith('http')
+        ? `${baseUrl}${doc.fileUrl}`
+        : doc.fileUrl;
+
+    return {
+      ...doc,
+      fileUrl: normalizedFileUrl,
+    };
+  }
+
   async getDocuments(propertyId: number): Promise<Document[]> {
-    return api.get<Document[]>(`/documents?propertyId=${propertyId}`);
+    const docs = await api.get<Document[]>(`/property-management/documents/property/${propertyId}`);
+    return docs.map((doc) => this.normalizeDocument(doc));
   }
 
   async createDocument(payload: CreateDocumentPayload): Promise<Document> {
     const formData = new FormData();
-    formData.append('name', payload.name);
-    formData.append('type', payload.type);
+    formData.append('documentName', payload.documentName);
+    formData.append('documentType', payload.documentType);
+    formData.append('propertyId', payload.propertyId.toString());
+
+    if (payload.companyId !== undefined) {
+      formData.append('companyId', payload.companyId.toString());
+    }
+    if (payload.tenantId !== undefined) {
+      formData.append('tenantId', payload.tenantId.toString());
+    }
+    if (payload.invoiceId !== undefined) {
+      formData.append('invoiceId', payload.invoiceId.toString());
+    }
+
     if (payload.file) {
       formData.append('file', payload.file);
     }
-    formData.append('propertyId', payload.propertyId.toString());
 
-    return api.post<Document>('/documents', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const doc = await api.post<Document>('/property-management/documents/upload', formData);
+    return this.normalizeDocument(doc);
+  }
+
+  async getDocument(propertyId: number, documentId: number): Promise<Document> {
+    const docs = await this.getDocuments(propertyId);
+    const doc = docs.find((d) => d.id === documentId);
+    if (!doc) {
+      throw new Error('Document not found');
+    }
+    return doc;
   }
 
   async deleteDocument(id: number): Promise<void> {

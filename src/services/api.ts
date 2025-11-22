@@ -35,13 +35,17 @@ class ApiService {
     config: RequestConfig = {}
   ): Promise<T> {
     const { requiresAuth = true, headers = {}, ...restConfig } = config;
+    const isFormData = restConfig.body instanceof FormData;
 
     const url = `${this.baseURL}${endpoint}`;
 
     const defaultHeaders: Record<string, string> = {
-      'Content-Type': 'application/json',
       ...(headers as Record<string, string>),
     };
+
+    if (!isFormData && !defaultHeaders['Content-Type']) {
+      defaultHeaders['Content-Type'] = 'application/json';
+    }
 
     if (requiresAuth && this.token) {
       defaultHeaders['Authorization'] = `Bearer ${this.token}`;
@@ -104,10 +108,15 @@ class ApiService {
     data?: unknown,
     config?: RequestConfig
   ): Promise<T> {
+    const isFormData = data instanceof FormData;
     return this.request<T>(endpoint, {
       ...config,
       method: 'POST',
-      body: JSON.stringify(data),
+      body: isFormData ? data : JSON.stringify(data),
+      headers: {
+        ...config?.headers,
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+      },
     });
   }
 

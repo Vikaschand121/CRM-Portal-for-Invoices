@@ -196,19 +196,25 @@ export interface UpdateTenantPayload extends CreateTenantPayload {}
 
 export interface Document {
   id: number;
-  name: string;
-  type: string;
-  url: string;
+  documentName: string;
+  documentType: string;
+  filePath: string;
+  fileUrl: string;
+  companyId?: number;
+  tenantId?: number;
   propertyId: number;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateDocumentPayload {
-  name: string;
-  type: string;
-  file: File | null; // For upload
+  documentName: string;
+  documentType: string;
+  companyId?: number;
+  tenantId?: number;
   propertyId: number;
+  invoiceId?: number;
+  file: File | null;
 }
 
 export interface Invoice {
