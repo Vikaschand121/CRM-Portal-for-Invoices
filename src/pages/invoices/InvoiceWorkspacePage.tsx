@@ -278,26 +278,12 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             }, 500);
           }
         } else {
-          const initialTenantId = tenantList[0]?.id ?? null;
           const initialForm = buildInitialForm(
             numericPropertyId,
             foundProperty.company?.id ?? numericCompanyId,
-            initialTenantId
+            null
           );
-          const initialNumber = generateInvoiceNumber(
-            foundProperty.propertyAddress,
-            tenantList[0]?.tenantName ?? '',
-            initialForm.invoiceType,
-            invoiceList
-          );
-          const formWithTenant = { ...initialForm, invoiceNumber: initialNumber };
-          if (initialTenantId) {
-            const tenant = tenantList.find((t) => t.id === initialTenantId);
-            if (tenant) {
-              formWithTenant.billToName = `${tenant.tenantName} - The Enterprise`;
-              formWithTenant.billToAddress = tenant.tenantCorrespondingAddress ?? '';
-            }
-          }
+          const formWithTenant = { ...initialForm, tenantId: null, billToName: '', billToAddress: '', invoiceNumber: `TEMP-${numericPropertyId}-${Date.now().toString().slice(-4)}` };
           setForm(formWithTenant);
         }
       } catch (err: any) {

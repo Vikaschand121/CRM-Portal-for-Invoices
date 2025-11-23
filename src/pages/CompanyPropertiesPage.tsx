@@ -42,6 +42,7 @@ import {
   // MoreVert,
   // People,
   TrendingUp,
+  Archive,
 } from '@mui/icons-material';
 import { Company, Property, CreatePropertyPayload, UpdatePropertyPayload } from '../types';
 import { companiesService } from '../services/companies.service';
@@ -203,14 +204,14 @@ export const CompanyPropertiesPage = () => {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (propertyId: number) => {
-    if (window.confirm('Are you sure you want to delete this property?')) {
+  const handleArchive = async (propertyId: number) => {
+    if (window.confirm('Are you sure you want to archive this property?')) {
       try {
         await propertiesService.deleteProperty(propertyId);
-        showSnackbar('Property deleted successfully', 'success');
+        showSnackbar('Property archived successfully', 'success');
         loadProperties();
       } catch (err) {
-        showSnackbar('Failed to delete property', 'error');
+        showSnackbar('Failed to archive property', 'error');
       }
     }
   };
@@ -602,8 +603,8 @@ export const CompanyPropertiesPage = () => {
                   <IconButton size="small" onClick={() => handleEdit(property)}>
                     <Edit />
                   </IconButton>
-                  <IconButton size="small" onClick={() => handleDelete(property.id)}>
-                    <Delete />
+                  <IconButton size="small" onClick={() => handleArchive(property.id)}>
+                    <Archive />
                   </IconButton>
                 </Box>
               </Card>

@@ -31,6 +31,7 @@ import {
   LocationOn,
   People,
   TrendingUp,
+  Archive,
 } from '@mui/icons-material';
 import { Company, BankDetails, CreateBankDetailsPayload, UpdateBankDetailsPayload } from '../types';
 import { companiesService } from '../services/companies.service';
@@ -187,43 +188,43 @@ export const CompanyDetailPage = () => {
       return;
     }
 
-    if (window.confirm('Are you sure you want to delete the bank details?')) {
+    if (window.confirm('Are you sure you want to archive the bank details?')) {
       try {
         await propertiesService.deleteBankDetails(parseInt(id, 10));
         setBankDetails(null);
         setSnackbar({
           open: true,
-          message: 'Bank details deleted successfully',
+          message: 'Bank details archived successfully',
           severity: 'success',
         });
       } catch (error) {
         setSnackbar({
           open: true,
-          message: 'Failed to delete bank details',
+          message: 'Failed to archive bank details',
           severity: 'error',
         });
       }
     }
   };
 
-  const handleDelete = async () => {
+  const handleArchive = async () => {
     if (!company?.id) {
       return;
     }
 
-    if (window.confirm('Are you sure you want to delete this company?')) {
+    if (window.confirm('Are you sure you want to archive this company?')) {
       try {
         await companiesService.deleteCompany(company.id);
         setSnackbar({
           open: true,
-          message: 'Company deleted successfully',
+          message: 'Company archived successfully',
           severity: 'success',
         });
         setTimeout(() => navigate('/companies'), 1500);
       } catch (error) {
         setSnackbar({
           open: true,
-          message: 'Failed to delete company',
+          message: 'Failed to archive company',
           severity: 'error',
         });
       }
@@ -431,6 +432,24 @@ export const CompanyDetailPage = () => {
                 width: { xs: '100%', md: 'auto' },
                 justifyContent: { xs: 'center', md: 'flex-end' }
               }}>
+                <Button
+                  startIcon={<Archive />}
+                  variant="outlined"
+                  onClick={handleArchive}
+                  sx={{
+                    mb: { xs: 0, md: 2 },
+                    color: 'white',
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    '&:hover': {
+                      bgcolor: 'rgba(255, 255, 255, 0.2)',
+                      borderColor: 'rgba(255, 255, 255, 0.5)',
+                    },
+                    width: { xs: '100%', sm: 'auto' },
+                    minWidth: { xs: '200px', sm: 'auto' },
+                  }}
+                >
+                  Archive Company
+                </Button>
                 <Button
                   startIcon={<ArrowBack />}
                   variant="contained"
@@ -754,79 +773,93 @@ export const CompanyDetailPage = () => {
                 </Typography>
               </Box>
 
+              {/* Bank Account Status */}
+              {bankDetails && (
+                <Box sx={{ mb: 3, p: 2, borderRadius: 2, bgcolor: 'success.50', border: '1px solid', borderColor: 'success.200' }}>
+                  <Typography variant="subtitle1" fontWeight={600} sx={{ color: 'success.main' }}>
+                    Bank Account Already Added
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    This company already has bank details configured. You can edit or delete them using the buttons below.
+                  </Typography>
+                </Box>
+              )}
+
               {/* Create Bank Account Section */}
-              <Box sx={{ mb: 3, p: 2, borderRadius: 2, bgcolor: 'grey.50', border: '1px solid', borderColor: 'grey.200' }}>
-                <Typography variant="subtitle1" fontWeight={600} gutterBottom sx={{ color: 'primary.main' }}>
-                  Create Bank Account
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-                  <TextField
-                    label="Account Holder Name"
-                    value={bankDetailsForm.accountHolderName}
-                    onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, accountHolderName: e.target.value })}
-                    fullWidth
-                    size="small"
-                    required
-                  />
-                  <TextField
-                    label="Bank Name"
-                    value={bankDetailsForm.bankName}
-                    onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, bankName: e.target.value })}
-                    fullWidth
-                    size="small"
-                    required
-                  />
-                  <TextField
-                    label="Sort Code"
-                    value={bankDetailsForm.sortCode}
-                    onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, sortCode: e.target.value })}
-                    fullWidth
-                    size="small"
-                    required
-                  />
-                  <TextField
-                    label="Account Number"
-                    value={bankDetailsForm.accountNumber}
-                    onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, accountNumber: e.target.value })}
-                    fullWidth
-                    size="small"
-                    required
-                  />
-                  <TextField
-                    label="Bank Address"
-                    value={bankDetailsForm.bankAddress}
-                    onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, bankAddress: e.target.value })}
-                    fullWidth
-                    multiline
-                    rows={3}
-                    size="small"
-                    required
-                  />
-                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                    <Button
-                      variant="outlined"
+              {!bankDetails && (
+                <Box sx={{ mb: 3, p: 2, borderRadius: 2, bgcolor: 'grey.50', border: '1px solid', borderColor: 'grey.200' }}>
+                  <Typography variant="subtitle1" fontWeight={600} gutterBottom sx={{ color: 'primary.main' }}>
+                    Create Bank Account
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                    <TextField
+                      label="Account Holder Name"
+                      value={bankDetailsForm.accountHolderName}
+                      onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, accountHolderName: e.target.value })}
+                      fullWidth
                       size="small"
-                      onClick={() => setBankDetailsForm({
-                        accountHolderName: '',
-                        bankName: '',
-                        sortCode: '',
-                        accountNumber: '',
-                        bankAddress: '',
-                      })}
-                    >
-                      Clear
-                    </Button>
-                    <Button
-                      variant="contained"
+                      required
+                    />
+                    <TextField
+                      label="Bank Name"
+                      value={bankDetailsForm.bankName}
+                      onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, bankName: e.target.value })}
+                      fullWidth
                       size="small"
-                      onClick={handleSaveBankDetails}
-                      disabled={!bankDetailsForm.accountHolderName || !bankDetailsForm.bankName || !bankDetailsForm.sortCode || !bankDetailsForm.accountNumber || !bankDetailsForm.bankAddress}
-                    >
-                      Create Bank Details
-                    </Button>
+                      required
+                    />
+                    <TextField
+                      label="Sort Code"
+                      value={bankDetailsForm.sortCode}
+                      onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, sortCode: e.target.value })}
+                      fullWidth
+                      size="small"
+                      required
+                    />
+                    <TextField
+                      label="Account Number"
+                      value={bankDetailsForm.accountNumber}
+                      onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, accountNumber: e.target.value })}
+                      fullWidth
+                      size="small"
+                      required
+                    />
+                    <TextField
+                      label="Bank Address"
+                      value={bankDetailsForm.bankAddress}
+                      onChange={(e) => setBankDetailsForm({ ...bankDetailsForm, bankAddress: e.target.value })}
+                      fullWidth
+                      multiline
+                      rows={3}
+                      size="small"
+                      required
+                    />
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => setBankDetailsForm({
+                          accountHolderName: '',
+                          bankName: '',
+                          sortCode: '',
+                          accountNumber: '',
+                          bankAddress: '',
+                        })}
+                      >
+                        Clear
+                      </Button>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={handleSaveBankDetails}
+                        disabled={!bankDetailsForm.accountHolderName || !bankDetailsForm.bankName || !bankDetailsForm.sortCode || !bankDetailsForm.accountNumber || !bankDetailsForm.bankAddress}
+                      >
+                        Create Bank Details
+                      </Button>
+                    </Box>
                   </Box>
                 </Box>
-              </Box>
+              )}
 
               {/* Existing Bank Details Display */}
               {bankDetailsLoading ? (
@@ -854,7 +887,7 @@ export const CompanyDetailPage = () => {
                         color="error"
                         onClick={handleDeleteBankDetails}
                       >
-                        Delete
+                        Archive
                       </Button>
                     </Box>
                   </Box>

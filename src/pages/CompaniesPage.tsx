@@ -33,6 +33,8 @@ import {
   Person,
   AccountBalance,
   Visibility,
+  ArrowBack,
+  Archive,
 } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -131,13 +133,13 @@ export const CompaniesPage = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this company?')) {
+    if (window.confirm('Are you sure you want to archive this company?')) {
       try {
         await companiesService.deleteCompany(id);
-        showSuccess('Company deleted successfully');
+        showSuccess('Company archived successfully');
         loadCompanies();
       } catch (error) {
-        showError('Failed to delete company');
+        showError('Failed to archive company');
       }
     }
   };
@@ -161,6 +163,11 @@ export const CompaniesPage = () => {
   return (
     <Container maxWidth="xl">
       <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: 2 }}>
+          <Button startIcon={<ArrowBack />} onClick={() => navigate('/property-management')}>
+            Back to Property Management
+          </Button>
+        </Box>
         <Box sx={{
           display: 'flex',
           flexDirection: { xs: 'column', sm: 'row' },
@@ -294,9 +301,9 @@ export const CompaniesPage = () => {
                         size="small"
                         onClick={() => handleDelete(company.id!)}
                         color="error"
-                        title="Delete"
+                        title="Archive"
                       >
-                        <Delete />
+                        <Archive />
                       </IconButton>
                     </Box>
                   </TableCell>

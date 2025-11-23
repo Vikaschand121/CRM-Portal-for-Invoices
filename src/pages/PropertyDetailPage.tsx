@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   Alert,
   Avatar,
@@ -105,6 +105,7 @@ const InfoRow = ({ label, value }: { label: string; value: string }) => (
 export const PropertyDetailPage = () => {
   const { companyId, propertyId } = useParams<{ companyId: string; propertyId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { showSnackbar } = useSnackbar();
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
@@ -129,7 +130,6 @@ export const PropertyDetailPage = () => {
     tenantCorrespondingAddress: '',
     breakDate: '',
     rentStartDate: '',
-    lenderName: '',
     aggreedAnnualRent: undefined,
   });
   const [tenantFormErrors, setTenantFormErrors] = useState({
@@ -138,7 +138,6 @@ export const PropertyDetailPage = () => {
     leaseEndDate: false,
     rentReviewDates: false,
     breakDate: false,
-    lenderName: false,
   });
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [deleteDocumentId, setDeleteDocumentId] = useState<number | null>(null);
@@ -186,6 +185,12 @@ export const PropertyDetailPage = () => {
     loadData();
   }, [propertyId]);
 
+  useEffect(() => {
+    if (location.state?.tab === 'documents') {
+      setTabValue(2); // Documents tab
+    }
+  }, [location.state]);
+
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
@@ -207,8 +212,8 @@ export const PropertyDetailPage = () => {
       tenantCorrespondingAddress: '',
       breakDate: '',
       rentStartDate: '',
-      lenderName: '',
       aggreedAnnualRent: undefined,
+      previousBalance: undefined,
     });
     setTenantFormErrors({
       tenantName: false,
@@ -216,7 +221,6 @@ export const PropertyDetailPage = () => {
       leaseEndDate: false,
       rentReviewDates: false,
       breakDate: false,
-      lenderName: false,
     });
     setTenantDialogOpen(true);
   };
@@ -237,8 +241,8 @@ export const PropertyDetailPage = () => {
       tenantCorrespondingAddress: tenant.tenantCorrespondingAddress,
       breakDate: tenant.breakDate,
       rentStartDate: tenant.rentStartDate,
-      lenderName: tenant.lenderName,
       aggreedAnnualRent: tenant.aggreedAnnualRent,
+      previousBalance: tenant.previousBalance,
     });
     setTenantFormErrors({
       tenantName: false,
@@ -246,7 +250,6 @@ export const PropertyDetailPage = () => {
       leaseEndDate: false,
       rentReviewDates: false,
       breakDate: false,
-      lenderName: false,
     });
     setTenantDialogOpen(true);
   };
@@ -271,7 +274,6 @@ export const PropertyDetailPage = () => {
       leaseEndDate: !tenantForm.leaseEndDate,
       rentReviewDates: !tenantForm.rentReviewDates.trim(),
       breakDate: !tenantForm.breakDate,
-      lenderName: !tenantForm.lenderName.trim(),
     };
     setTenantFormErrors(errors);
 
@@ -820,7 +822,6 @@ export const PropertyDetailPage = () => {
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Lease End Date</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Rent Review Dates</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Break Date</TableCell>
-                  {/* <TableCell sx={{ color: 'white', fontWeight: 600 }}>Lender Name</TableCell> */}
                   {/* <TableCell sx={{ color: 'white', fontWeight: 600 }}>VAT Available</TableCell> */}
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
                 </TableRow>
@@ -832,8 +833,7 @@ export const PropertyDetailPage = () => {
                     <TableCell>{new Date(tenant.leaseStartDate).toLocaleDateString()}</TableCell>
                     <TableCell>{new Date(tenant.leaseEndDate).toLocaleDateString()}</TableCell>
                     <TableCell>{tenant.rentReviewDates}</TableCell>
-                    <TableCell>{new Date(tenant.breakDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{tenant.lenderName}</TableCell>
+                    <TableCell>{tenant.breakDate && !isNaN(new Date(tenant.breakDate).getTime()) ? new Date(tenant.breakDate).toLocaleDateString() : tenant.breakDate || 'N/A'}</TableCell>
                     {/* <TableCell>{tenant.isVatAvailable ? 'Yes' : 'No'}</TableCell> */}
                     <TableCell>
                       <IconButton onClick={() => handleEditTenant(tenant)}>
@@ -1098,6 +1098,15 @@ export const PropertyDetailPage = () => {
               onChange={(e) => setTenantForm({ ...tenantForm, rentStartDate: e.target.value })}
               fullWidth
               InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="Previous Balance"
+              type="number"
+              value={tenantForm.previousBalance || ''}
+              onChange={(e) => setTenantForm({ ...tenantForm, previousBalance: e.target.value ? parseFloat(e.target.value) : undefined })}
+              fullWidth
+              disabled={!editingTenant}
+              InputProps={{ startAdornment: <Typography sx={{ mr: 1 }}>£</Typography> }}
             />
             <FormControlLabel
               control={

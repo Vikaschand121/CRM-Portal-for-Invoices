@@ -11,6 +11,7 @@ import {
   Menu,
   MenuItem,
   IconButton,
+  Button,
 } from '@mui/material';
 import {
   CheckSquare,
@@ -24,6 +25,7 @@ import {
   Calendar,
   AlertTriangle,
   ChevronDown,
+  ArrowLeft,
 } from 'lucide-react';
 import {
   LineChart,
@@ -123,6 +125,11 @@ export const PropertyManagementPage = () => {
     <Container maxWidth="xl">
       {/* Header Section */}
       <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: 2 }}>
+          <Button startIcon={<ArrowLeft />} onClick={() => navigate('/dashboard')} sx={{ mb: 2 }}>
+            Back to Dashboard
+          </Button>
+        </Box>
         <Typography variant="h4" component="h1" gutterBottom fontWeight={600}>
           Property Management Dashboard
         </Typography>

@@ -90,14 +90,7 @@ export const DashboardPage = () => {
   ];
 
   const stats = [
-    {
-      title: "Today's Tasks Per Company",
-      value: '24',
-      change: '+5',
-      changeType: 'positive',
-      icon: CheckSquare,
-      color: '#1976d2',
-    },
+ 
     {
       title: 'Total Number Of Departments',
       value: '5',
@@ -106,6 +99,14 @@ export const DashboardPage = () => {
       icon: Building2,
       color: '#2e7d32',
       departments: ['Property Management', 'Legal', 'Financial', 'Maintenance', 'Accounts'],
+    },
+       {
+      title: "Today's Tasks Per Company",
+      value: '24',
+      change: '+5',
+      changeType: 'positive',
+      icon: CheckSquare,
+      color: '#1976d2',
     },
     {
       title: 'Total Income Breakdown Per Department',
@@ -269,7 +270,7 @@ export const DashboardPage = () => {
             onClick={() => {
               // Navigate to department pages
               const routes = {
-                'Property Management': '/companies',
+                'Property Management': '/property-management',
 
                 'Legal': '/legal',
                 'Financial': '/financial',

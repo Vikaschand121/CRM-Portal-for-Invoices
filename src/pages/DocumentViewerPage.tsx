@@ -79,7 +79,7 @@ export const DocumentViewerPage = () => {
     <Container maxWidth="xl">
       <Box sx={{ mt: 2, mb: 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-          <IconButton onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}`)} sx={{ mr: 2 }}>
+          <IconButton onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}`, { state: { tab: 'documents' } })} sx={{ mr: 2 }}>
             <ArrowBack />
           </IconButton>
           <Box>
