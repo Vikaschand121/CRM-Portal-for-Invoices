@@ -40,7 +40,8 @@ const menuItems = [
       { title: 'Dashboard', path: '/property-management' },
       {
         title: 'Calendar',
-        path: '/calendar',
+         path: '/calendar',
+        // path: '/calendar',
       },
       { title: 'Companies', path: '/companies' },
       { title: 'Tasks', path: '/tasks' },
