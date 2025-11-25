@@ -153,7 +153,7 @@ export interface Meeting {
   userIds?: number[];
 }
 
-export type RentPaymentFrequency = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+export type RentPaymentFrequency = 'MONTHLY' | 'QUARTERLY';
 
 export interface Tenant {
   id: number;
@@ -172,6 +172,7 @@ export interface Tenant {
   rentStartDate: string;
   lenderName?: string;
   aggreedAnnualRent?: string;
+  netAmount?: string;
   previousBalance?: number;
   createdAt?: string;
   updatedAt?: string;
@@ -193,6 +194,7 @@ export interface CreateTenantPayload {
   rentStartDate: string;
   lenderName?: string;
   aggreedAnnualRent?: string;
+  netAmount?: string;
   previousBalance?: number;
 }
 
@@ -243,6 +245,7 @@ export interface Invoice {
   vatRate: number;
   totalAmount: number;
   paymentMade: number;
+  balanceDue?: string;
   notes: string;
   bankAccountName: string;
   bankName: string;
@@ -279,6 +282,7 @@ export interface CreateInvoicePayload {
   vatRate: number;
   totalAmount: number;
   paymentMade: number;
+  balanceDue?: string;
   notes: string;
   bankAccountName: string;
   bankName: string;

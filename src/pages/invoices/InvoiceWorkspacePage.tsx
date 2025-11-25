@@ -41,6 +41,7 @@ interface InvoiceFormState {
   vatAmount: number;
   totalAmount: number;
   status: string;
+  balanceDue?: string;
   notes: string;
   billToName: string;
   billToAddress: string;
@@ -178,6 +179,7 @@ const buildInitialForm = (propertyId: number, companyId: number | null, tenantId
     vatAmount: 0,
     totalAmount: 0,
     status: 'Draft',
+    balanceDue: undefined,
     notes: '',
     billToName: '',
     billToAddress: '',
@@ -266,6 +268,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             vatAmount: target.vatAmount,
             totalAmount: target.totalAmount,
             status: 'Draft', // Default, since not in response
+            balanceDue: target.balanceDue,
             notes: target.notes,
             billToName: target.billToName,
             billToAddress: target.billToAddress,
@@ -322,7 +325,8 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
   const handleNetAmountChange = (value: string) => {
     if (!form) return;
     const net = Number(value) || 0;
-    const vat = net * VAT_RATE;
+    const vatRate = currentTenant?.isVatRegistered ? 0.2 : 0;
+    const vat = net * vatRate;
     updateForm({ netAmount: net, vatAmount: vat, totalAmount: net + vat });
     // Auto-generate notes when amount changes
     setTimeout(() => handleRentalPeriodChange(), 100);
@@ -333,18 +337,15 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
 
     const startDate = new Date(form.rentalPeriodStart);
     const endDate = new Date(form.rentalPeriodEnd);
-    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    const annualRent = form.netAmount * 10; // Adjust for correct annual rent amount
-    const rentPerDay = annualRent / 365;
-    const totalRentDue = rentPerDay * daysDiff;
+    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1; // inclusive
+    const rentPerDay = form.netAmount / daysDiff;
 
-    const companyName = property.company?.name || 'Company';
-    const tenantName = currentTenant?.tenantName || 'Tenant';
-    const leaseStartDate = currentTenant ? new Date(currentTenant.leaseStartDate).toLocaleDateString('en-GB') : 'N/A';
+    const startStr = startDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const endStr = endDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-    return `The rental period is ${daysDiff} days from ${startDate.toLocaleDateString('en-GB')} to ${endDate.toLocaleDateString('en-GB')}. Annual rent is £${annualRent.toFixed(2)}, giving a daily rate of £${rentPerDay.toFixed(2)}. Rent due for ${daysDiff} days is £${totalRentDue.toFixed(2)}.
+    return `Rent payable ${startStr} to ${endStr}. Rent per day is ${rentPerDay.toFixed(2)}.
 
-Lease agreed between ${companyName} and ${tenantName} on ${leaseStartDate} with The Enterprise.
+Lease agreed between ${property.company?.name || 'Company'} and ${currentTenant?.tenantName || 'Tenant'} on ${currentTenant ? new Date(currentTenant.leaseStartDate).toLocaleDateString('en-GB') : 'N/A'} with The Enterprise.
 
 PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED DUE DATE, OR WITHIN 7 DAYS WHERE A DUE DATE IS NOT STATED, OR PRIOR AGREEMENT REACHED, OUR SOLICITORS WILL BE INSTRUCTED TO COLLECT THE AMOUNT OUTSTANDING IN ACCORDANCE WITH THE TERMS OF THE LEASE.`;
   };
@@ -425,6 +426,7 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
         vatRate: vatRateValue,
         totalAmount: form.totalAmount,
         paymentMade: 0,
+        balanceDue: form.balanceDue,
         notes: form.notes,
         bankAccountName: bankDetails?.accountHolderName || '',
         bankName: bankDetails?.bankName || '',
@@ -583,12 +585,25 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
                     prev.invoiceType,
                     existingInvoices
                   );
+                  const billingFrequency = tenant?.rentPaymentFrequency?.toLowerCase() as BillingFrequency || 'monthly';
+                  const rentalPeriodStart = tenant?.rentStartDate || prev.rentalPeriodStart;
+                  const netAmount = parseFloat(tenant?.netAmount || '0');
+                  const vatRate = tenant?.isVatRegistered ? 0.2 : 0;
+                  const vatAmount = netAmount * vatRate;
+                  const totalAmount = netAmount + vatAmount;
+                  const rentalPeriodEnd = billingFrequency === 'quarterly' ? currentQuarter.end : periodEnd(rentalPeriodStart, billingFrequency);
                   return {
                     ...prev,
                     tenantId,
                     billToName: tenant ? `${tenant.tenantName} - The Enterprise` : prev.billToName,
                     billToAddress: tenant?.tenantCorrespondingAddress ?? prev.billToAddress,
                     invoiceNumber,
+                    billingFrequency,
+                    rentalPeriodStart,
+                    rentalPeriodEnd,
+                    netAmount,
+                    vatAmount,
+                    totalAmount,
                   };
                 });
               }}
@@ -614,7 +629,7 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
           </Grid>
 
           <Grid item xs={12} md={4}>
-            <TextField select label="Billing Frequency" value={form.billingFrequency} onChange={(e) => handleFrequencyChange(e.target.value as BillingFrequency)} fullWidth>
+            <TextField select label="Billing Frequency" value={form.billingFrequency} fullWidth disabled>
               {BILLING_OPTIONS.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.label}
@@ -627,13 +642,9 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
               label="Rental Period Start"
               type="date"
               value={form.rentalPeriodStart}
-              onChange={(e) => handleRentalStartChange(e.target.value)}
               fullWidth
               InputLabelProps={{ shrink: true }}
-              inputProps={{
-                min: form.billingFrequency === 'quarterly' ? currentQuarter.start : undefined,
-                max: form.billingFrequency === 'quarterly' ? currentQuarter.end : undefined,
-              }}
+              disabled
             />
           </Grid>
           <Grid item xs={12} md={4}>
@@ -641,13 +652,13 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
           </Grid>
 
           <Grid item xs={12} md={4}>
-            <TextField label="Net Amount" type="number" value={form.netAmount} onChange={(e) => handleNetAmountChange(e.target.value)} fullWidth InputProps={{ startAdornment: <Typography sx={{ mr: 1 }}>£</Typography> }} />
+            <TextField label="Net Amount" type="number" value={form.netAmount} fullWidth InputProps={{ startAdornment: <Typography sx={{ mr: 1 }}>£</Typography> }} disabled />
           </Grid>
           <Grid item xs={12} md={4}>
-            <TextField label="VAT (20%)" value={form.vatAmount.toFixed(2)} fullWidth InputProps={{ startAdornment: <Typography sx={{ mr: 1 }}>£</Typography> }} disabled />
+            <TextField label={`VAT (${currentTenant?.isVatRegistered ? '20%' : '0%'})`} value={form.vatAmount.toFixed(2)} fullWidth InputProps={{ startAdornment: <Typography sx={{ mr: 1 }}>£</Typography> }} disabled />
           </Grid>
           <Grid item xs={12} md={4}>
-            <TextField label="Total Amount" value={form.totalAmount.toFixed(2)} fullWidth InputProps={{ startAdornment: <Typography sx={{ mr: 1 }}>£</Typography> }} disabled />
+            <TextField label="Total Amount" value={form.totalAmount.toFixed(2)} fullWidth InputProps={{ startAdornment: <Typography sx={{ mr: 1 }}>£</Typography> }} />
           </Grid>
 
           <Grid item xs={12}>

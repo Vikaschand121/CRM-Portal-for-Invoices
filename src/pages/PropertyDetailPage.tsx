@@ -76,7 +76,6 @@ const formatCurrency = (value?: number): string => {
 const RENT_PAYMENT_FREQUENCY_OPTIONS: { value: RentPaymentFrequency; label: string }[] = [
   { value: 'MONTHLY', label: 'Monthly' },
   { value: 'QUARTERLY', label: 'Quarterly' },
-  { value: 'YEARLY', label: 'Annually' },
 ];
 
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
@@ -131,6 +130,7 @@ export const PropertyDetailPage = () => {
     breakDate: '',
     rentStartDate: '',
     aggreedAnnualRent: undefined,
+    netAmount: undefined,
   });
   const [tenantFormErrors, setTenantFormErrors] = useState({
     tenantName: false,
@@ -191,8 +191,22 @@ export const PropertyDetailPage = () => {
     }
   }, [location.state]);
 
+  useEffect(() => {
+    const netAmount = calculateNetAmount(tenantForm.aggreedAnnualRent, tenantForm.rentPaymentFrequency);
+    setTenantForm(prev => ({ ...prev, netAmount }));
+  }, [tenantForm.aggreedAnnualRent, tenantForm.rentPaymentFrequency]);
+
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+  };
+
+  const calculateNetAmount = (annualRent?: string, frequency?: RentPaymentFrequency): string => {
+    if (!annualRent || !frequency) return '';
+    const rent = parseFloat(annualRent);
+    if (isNaN(rent)) return '';
+    if (frequency === 'MONTHLY') return (rent / 12).toFixed(0);
+    if (frequency === 'QUARTERLY') return (rent / 4).toFixed(0);
+    return '';
   };
 
   // Tenant handlers
@@ -213,6 +227,7 @@ export const PropertyDetailPage = () => {
       breakDate: '',
       rentStartDate: '',
       aggreedAnnualRent: undefined,
+      netAmount: undefined,
       previousBalance: undefined,
     });
     setTenantFormErrors({
@@ -242,6 +257,7 @@ export const PropertyDetailPage = () => {
       breakDate: tenant.breakDate,
       rentStartDate: tenant.rentStartDate,
       aggreedAnnualRent: tenant.aggreedAnnualRent,
+      netAmount: tenant.netAmount,
       previousBalance: tenant.previousBalance,
     });
     setTenantFormErrors({
@@ -1070,6 +1086,13 @@ export const PropertyDetailPage = () => {
                 </MenuItem>
               ))}
             </TextField>
+            <TextField
+              label="Net Amount"
+              value={tenantForm.netAmount || ''}
+              fullWidth
+              disabled
+              InputProps={{ startAdornment: <Typography sx={{ mr: 1 }}>£</Typography> }}
+            />
             <TextField
               label="Tenant Email"
               type="email"
