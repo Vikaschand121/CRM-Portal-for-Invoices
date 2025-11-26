@@ -272,10 +272,10 @@ export const DashboardPage = () => {
               const routes = {
                 'Property Management': '/property-management',
 
-                'Legal': '/legal',
-                'Financial': '/financial',
-                'Maintenance': '/maintenance',
-                'Accounts': '/accounts'
+                'Legal': '/legal-dashboard',
+                'Financial': '/financial-dashboard',
+                'Maintenance': '/maintenance-dashboard',
+                'Accounts': '/accounts-dashboard'
               };
               const route = routes[dept as keyof typeof routes];
               if (route) {

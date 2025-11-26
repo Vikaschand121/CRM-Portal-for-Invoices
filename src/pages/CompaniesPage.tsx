@@ -165,7 +165,7 @@ export const CompaniesPage = () => {
       <Box sx={{ mb: 4 }}>
         <Box sx={{ mb: 2 }}>
           <Button startIcon={<ArrowBack />} onClick={() => navigate('/property-management')}>
-            Back to Property Management
+            Back to Dashboard
           </Button>
         </Box>
         <Box sx={{
