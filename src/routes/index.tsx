@@ -20,8 +20,8 @@ import { AccountsDashboardPage } from '../pages/AccountsDashboardPage';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { PublicRoute } from '../components/PublicRoute';
 import { Layout } from '../components/Layout';
-// import CalendarPage from '../pages/calendar/CalendarPage';
-import CalendarAccessPage from '../pages/CalendarAccessPage';
+import CalendarPage from '../pages/calendar/CalendarPage';
+// import CalendarAccessPage from '../pages/CalendarAccessPage';
 import InvoiceCreatePage from '../pages/invoices/InvoiceCreatePage';
 import InvoiceEditPage from '../pages/invoices/InvoiceEditPage';
 import { InvoiceViewPage } from '../pages/invoices/InvoiceViewPage';
@@ -82,9 +82,9 @@ export const AppRoutes = () => {
         <Route path="financial" element={<FinancialPage />} />
         <Route path="maintenance" element={<MaintenancePage />} />
         <Route path="accounts" element={<AccountsPage />} />
-                {/* <Route path="calendar" element={<CalendarPage />} /> */}
+        <Route path="calendar" element={<CalendarPage />} />
 
-        <Route path="calendar" element={<CalendarAccessPage />} />
+        {/* <Route path="calendar" element={<CalendarAccessPage />} /> */}
         <Route path="tasks" element={<PlaceholderPage title="Tasks" />} />
         <Route path="invoices" element={<PlaceholderPage title="Invoices" />} />
       </Route>

@@ -1,26 +1,26 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Container,
-  Divider,
   Grid,
+  InputAdornment,
   MenuItem,
   Paper,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack, Edit, Print, Save, Send } from '@mui/icons-material';
+import { ArrowBack, Send } from '@mui/icons-material';
 import { Property, Tenant, Invoice, BankDetails } from '../../types';
 import { propertiesService } from '../../services/properties.service';
 import { tenantsService } from '../../services/tenants.service';
 import { invoicesService } from '../../services/invoices.service';
 import { useSnackbar } from '../../hooks/useSnackbar';
+import { InvoicePreview } from '../../components/InvoicePreview';
 
 type WorkspaceMode = 'create' | 'edit';
 
@@ -42,19 +42,18 @@ interface InvoiceFormState {
   totalAmount: number;
   status: string;
   balanceDue?: string;
+  paymentMade?: number;
   notes: string;
   billToName: string;
   billToAddress: string;
 }
-
-const VAT_RATE = 0.2;
 
 const INVOICE_TYPES: { value: InvoiceType; label: string }[] = [
   { value: 'rental', label: 'Rental Invoice' },
   { value: 'service_charge', label: 'Service Charge Invoice' },
   { value: 'maintenance', label: 'Maintenance Invoice' },
   { value: 'insurance', label: 'Insurance Invoice' },
-   { value: 'rents_deposit', label: 'Rent Deposit Invoice' },
+  { value: 'rents_deposit', label: 'Rent Deposit Invoice' },
   { value: 'other', label: 'Miscellaneous Invoice' },
 ];
 
@@ -71,7 +70,6 @@ const INVOICE_TYPE_ABBREVIATIONS: Record<InvoiceType, string> = {
   rents_deposit: 'RD',
   other: 'OT',
 };
-
 
 const iso = (value: Date | string) => {
   const date = value instanceof Date ? value : new Date(value);
@@ -104,24 +102,20 @@ const getQuarterDates = (dateStr: string) => {
   const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return { start: '', end: '' };
   const year = date.getFullYear();
-  const month = date.getMonth(); // 0-11
+  const month = date.getMonth();
   const day = date.getDate();
 
   let start: string, end: string;
   if ((month === 2 && day >= 25) || month === 3 || month === 4 || (month === 5 && day <= 23)) {
-    // Q1: Mar 25 - Jun 23
     start = `${year}-03-25`;
     end = `${year}-06-23`;
   } else if ((month === 5 && day >= 24) || month === 6 || month === 7 || (month === 8 && day <= 28)) {
-    // Q2: Jun 24 - Sep 28
     start = `${year}-06-24`;
     end = `${year}-09-28`;
   } else if ((month === 8 && day >= 29) || month === 9 || month === 10 || (month === 11 && day <= 24)) {
-    // Q3: Sep 29 - Dec 24
     start = `${year}-09-29`;
     end = `${year}-12-24`;
   } else {
-    // Q4: Dec 25 - Mar 24 next year
     start = `${year}-12-25`;
     end = `${year + 1}-03-24`;
   }
@@ -166,7 +160,7 @@ const generateInvoiceNumber = (
 const buildInitialForm = (propertyId: number, companyId: number | null, tenantId: number | null): InvoiceFormState => {
   const today = iso(new Date());
   return {
-    invoiceNumber: `TEMP-${propertyId}-${Date.now().toString().slice(-4)}`, // Temporary, will be updated
+    invoiceNumber: `TEMP-${propertyId}-${Date.now().toString().slice(-4)}`,
     invoiceType: 'rental',
     billingFrequency: 'monthly',
     invoiceDate: today,
@@ -179,6 +173,7 @@ const buildInitialForm = (propertyId: number, companyId: number | null, tenantId
     vatAmount: 0,
     totalAmount: 0,
     status: 'Draft',
+    paymentMade: 0,
     balanceDue: undefined,
     notes: '',
     billToName: '',
@@ -237,7 +232,6 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
           bankDetailsData = await propertiesService.getBankDetails(numericCompanyId);
         } catch (err) {
           console.warn('Failed to fetch bank details:', err);
-          // Bank details are optional, continue without them
         }
         if (cancelled) return;
 
@@ -256,8 +250,8 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
           if (!target) throw new Error('Invoice not found');
           setForm({
             invoiceNumber: target.invoiceNumber,
-            invoiceType: target.invoiceType === 'Rent' ? 'rental' : 'other', // Map back
-            billingFrequency: 'monthly', // Default, since not in response
+            invoiceType: target.invoiceType === 'Rent' ? 'rental' : 'other',
+            billingFrequency: 'monthly',
             invoiceDate: target.invoiceDate,
             rentalPeriodStart: target.rentalPeriodStart,
             rentalPeriodEnd: target.rentalPeriodEnd,
@@ -267,13 +261,13 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             netAmount: target.netAmount,
             vatAmount: target.vatAmount,
             totalAmount: target.totalAmount,
-            status: 'Draft', // Default, since not in response
+            status: 'Draft',
+            paymentMade: target.paymentMade,
             balanceDue: target.balanceDue,
             notes: target.notes,
             billToName: target.billToName,
             billToAddress: target.billToAddress,
           });
-          // Auto-generate notes for existing invoices if they don't have notes
           if (!(target as any).notes) {
             setTimeout(() => {
               const notes = generateNotes();
@@ -306,30 +300,10 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
     setForm((prev) => (prev ? { ...prev, ...patch } : prev));
   };
 
-  const handleFrequencyChange = (value: BillingFrequency) => {
-    if (!form) return;
-    const newEnd = value === 'quarterly' ? currentQuarter.end : periodEnd(form.rentalPeriodStart, value);
-    updateForm({ billingFrequency: value, rentalPeriodEnd: newEnd });
-    // Auto-generate notes when billing frequency changes
-    setTimeout(() => handleRentalPeriodChange(), 100);
-  };
-
-  const handleRentalStartChange = (value: string) => {
-    if (!form) return;
-    const newEnd = form.billingFrequency === 'quarterly' ? currentQuarter.end : periodEnd(value, form.billingFrequency);
-    updateForm({ rentalPeriodStart: value, rentalPeriodEnd: newEnd });
-    // Auto-generate notes when rental period changes
-    setTimeout(() => handleRentalPeriodChange(), 100);
-  };
-
-  const handleNetAmountChange = (value: string) => {
-    if (!form) return;
-    const net = Number(value) || 0;
-    const vatRate = currentTenant?.isVatRegistered ? 0.2 : 0;
-    const vat = net * vatRate;
-    updateForm({ netAmount: net, vatAmount: vat, totalAmount: net + vat });
-    // Auto-generate notes when amount changes
-    setTimeout(() => handleRentalPeriodChange(), 100);
+  const handleRentalPeriodChange = () => {
+    if (!form || !property) return;
+    const notes = generateNotes();
+    updateForm({ notes });
   };
 
   const generateNotes = () => {
@@ -337,23 +311,22 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
 
     const startDate = new Date(form.rentalPeriodStart);
     const endDate = new Date(form.rentalPeriodEnd);
-    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1; // inclusive
+    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     const rentPerDay = form.netAmount / daysDiff;
 
     const startStr = startDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const endStr = endDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const tenant = tenants.find(t => t.id === form.tenantId);
+    const leaseStartStr = tenant
+      ? new Date(tenant.leaseStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      : 'N/A';
+    const propertyLabel = property.propertyName || property.propertyAddress || 'Property';
 
     return `Rent payable ${startStr} to ${endStr}. Rent per day is ${rentPerDay.toFixed(2)}.
 
-Lease agreed between ${property.company?.name || 'Company'} and ${currentTenant?.tenantName || 'Tenant'} on ${currentTenant ? new Date(currentTenant.leaseStartDate).toLocaleDateString('en-GB') : 'N/A'} with The Enterprise.
+Lease agreed between ${property.company?.name || 'Company'} and ${tenant?.tenantName || 'Tenant'} on ${leaseStartStr}
 
 PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED DUE DATE, OR WITHIN 7 DAYS WHERE A DUE DATE IS NOT STATED, OR PRIOR AGREEMENT REACHED, OUR SOLICITORS WILL BE INSTRUCTED TO COLLECT THE AMOUNT OUTSTANDING IN ACCORDANCE WITH THE TERMS OF THE LEASE.`;
-  };
-
-  const handleRentalPeriodChange = () => {
-    if (!form || !property) return;
-    const notes = generateNotes();
-    updateForm({ notes });
   };
 
   const resolveInvoiceType = (invoiceType: InvoiceType): string => {
@@ -374,13 +347,10 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
   };
 
   const handleSave = async (nextStatus: string) => {
-    console.log('handleSave called with status:', nextStatus);
     if (!form || saving || !property) {
-      console.log('handleSave early return: form?', !!form, 'saving?', saving, 'property?', !!property);
       return;
     }
 
-    // Validation
     if (!form.tenantId) {
       showSnackbar('Please select a tenant', 'error');
       return;
@@ -396,6 +366,13 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
 
     try {
       setSaving(true);
+
+      const previousBalanceValue = currentTenant?.previousBalance ?? 0;
+      const paymentMadeValue = form.paymentMade ?? 0;
+      const calculatedBalance = form.balanceDue !== undefined && form.balanceDue !== null && form.balanceDue !== ''
+        ? Number(form.balanceDue)
+        : previousBalanceValue + form.totalAmount - paymentMadeValue;
+      const safeBalance = Number.isFinite(calculatedBalance) ? calculatedBalance : 0;
 
       const resolvedInvoiceType = resolveInvoiceType(form.invoiceType);
       const vatRateValue = form.netAmount ? form.vatAmount / form.netAmount : 0;
@@ -425,42 +402,34 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
         vatAmount: form.vatAmount,
         vatRate: vatRateValue,
         totalAmount: form.totalAmount,
-        paymentMade: 0,
-        balanceDue: form.balanceDue,
+        paymentMade: paymentMadeValue,
+        balanceDue: safeBalance.toFixed(2),
         notes: form.notes,
         bankAccountName: bankDetails?.accountHolderName || '',
         bankName: bankDetails?.bankName || '',
         bankSortCode: bankDetails?.sortCode || '',
         bankAccountNumber: bankDetails?.accountNumber || '',
         bankAddress: bankDetails?.bankAddress || '',
-      } as any; // TODO: extend backend/CreateInvoicePayload to avoid casting.
+      } as any;
 
       if (mode === 'edit' && numericInvoiceId) {
-        console.log('Updating invoice with ID:', numericInvoiceId);
-        console.log('Update payload:', payload);
         await invoicesService.updateInvoice(numericInvoiceId, payload);
-        console.log('Invoice updated successfully');
         showSnackbar('Invoice updated successfully', 'success');
         setSubmitted(true);
         setTimeout(() => navigate(`/companies/${companyId}/properties/${propertyId}`), 1000);
       } else {
-        console.log('Creating new invoice');
-        console.log('Create payload:', payload);
         await invoicesService.createInvoice(payload);
-        console.log('Invoice created successfully');
         showSnackbar('Invoice created successfully', 'success');
         setSubmitted(true);
         setTimeout(() => navigate(`/companies/${companyId}/properties/${propertyId}`), 1000);
       }
     } catch (err) {
-      console.error('Failed to save invoice:', err);
       showSnackbar('Failed to save invoice', 'error');
     } finally {
       setSaving(false);
     }
   };
 
-  const handlePrint = () => window.print();
 
   if (loading || !form || !property) {
     return (
@@ -481,236 +450,222 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
     );
   }
 
+  const invoiceTitle = INVOICE_TYPES.find((type) => type.value === form.invoiceType)?.label ?? 'Invoice';
+  const previousBalanceValue = currentTenant?.previousBalance ?? 0;
+  const paymentMadeValue = form.paymentMade ?? 0;
+  const calculatedBalance = form.balanceDue !== undefined && form.balanceDue !== null && form.balanceDue !== ''
+    ? Number(form.balanceDue)
+    : previousBalanceValue + form.totalAmount - paymentMadeValue;
+  const safeBalanceDue = Number.isFinite(calculatedBalance) ? calculatedBalance : 0;
+
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
       <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={2} sx={{ mb: 3 }}>
         <Button startIcon={<ArrowBack />} onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}`)}>
           Back to Property
         </Button>
-        <Stack direction="row" spacing={1}>
-           <Button variant="contained" startIcon={saving || submitted ? <CircularProgress size={20} /> : <Send />} disabled={saving || submitted} onClick={() => handleSave('Issued')}>
-             {submitted ? 'Submitted' : saving ? 'Submitting...' : 'Issue Invoice'}
-           </Button>
-           {mode === 'edit' && (
-             <Button variant="outlined" startIcon={<Edit />} onClick={() => navigate('')}>
-               Edit Details
-             </Button>
-           )}
-         </Stack>
+        <Button
+          variant="contained"
+          startIcon={saving || submitted ? <CircularProgress size={20} /> : <Send />}
+          disabled={saving || submitted}
+          onClick={() => handleSave('Issued')}
+        >
+          {submitted ? 'Submitted' : saving ? 'Submitting...' : 'Issue Invoice'}
+        </Button>
       </Stack>
 
-      <Paper elevation={4} sx={{ p: 4, bgcolor: 'background.paper', width: '100%', minHeight: '1120px' /* A4 feel */ }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
-          <Box>
-            <Typography variant="h4" fontWeight={700}>
-              {INVOICE_TYPES.find((type) => type.value === form.invoiceType)?.label ?? 'Invoice'}
-            </Typography>
-            <Typography color="text.secondary">Invoice #{form.invoiceNumber}</Typography>
-          </Box>
-          <Box textAlign="right">
-            <Typography variant="h6">{property.company?.name}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {property.company?.registeredAddress}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Company No: {property.company?.companyNumber}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              VAT No: {property.company?.vatNumber}
-            </Typography>
-          </Box>
-        </Box>
+      <Stack spacing={3}>
+        <Paper elevation={1} sx={{ p: { xs: 2, md: 3 }, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={4}>
+              <TextField
+                select
+                label="Invoice Type"
+                value={form.invoiceType}
+                fullWidth
+                onChange={(e) => {
+                  const invoiceType = e.target.value as InvoiceType;
+                  setForm((prev) => {
+                    if (!prev) return prev;
+                    const tenant = tenants.find((t) => t.id === prev.tenantId);
+                    const next = { ...prev, invoiceType };
+                    next.invoiceNumber = generateInvoiceNumber(
+                      property?.propertyAddress ?? '',
+                      tenant?.tenantName ?? '',
+                      invoiceType,
+                      existingInvoices
+                    );
+                    return next;
+                  });
+                }}
+              >
+                {INVOICE_TYPES.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField label="Invoice Number" value={form.invoiceNumber} onChange={(e) => updateForm({ invoiceNumber: e.target.value })} fullWidth />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                label="Invoice Date"
+                type="date"
+                value={form.invoiceDate}
+                onChange={(e) => updateForm({ invoiceDate: e.target.value })}
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
 
-        <Divider sx={{ mb: 4 }} />
+            <Grid item xs={12} md={6}>
+              <TextField
+                select
+                label="Billed To (Tenant)"
+                value={form.tenantId ?? ''}
+                fullWidth
+                required
+                onChange={(e) => {
+                  const tenantId = Number(e.target.value);
+                  const tenant = tenants.find((t) => t.id === tenantId);
+                  setForm((prev) => {
+                    if (!prev) return prev;
+                    const invoiceNumber = generateInvoiceNumber(
+                      property?.propertyAddress ?? '',
+                      tenant?.tenantName ?? '',
+                      prev.invoiceType,
+                      existingInvoices
+                    );
+                    const billingFrequency = (tenant?.rentPaymentFrequency?.toLowerCase() as BillingFrequency) || 'monthly';
+                    const rentalPeriodStart = tenant?.rentStartDate || prev.rentalPeriodStart;
+                    const netAmount = parseFloat(tenant?.netAmount || '0');
+                    const vatRate = tenant?.isVatRegistered ? 0.2 : 0;
+                    const vatAmount = netAmount * vatRate;
+                    const totalAmount = netAmount + vatAmount;
+                    const rentalPeriodEnd = billingFrequency === 'quarterly' ? currentQuarter.end : periodEnd(rentalPeriodStart, billingFrequency);
+                    return {
+                      ...prev,
+                      tenantId,
+                      billToName: tenant ? `${tenant.tenantName} - The Enterprise` : prev.billToName,
+                      billToAddress: tenant?.tenantCorrespondingAddress ?? prev.billToAddress,
+                      invoiceNumber,
+                      billingFrequency,
+                      rentalPeriodStart,
+                      rentalPeriodEnd,
+                      netAmount,
+                      vatAmount,
+                      totalAmount,
+                    };
+                  });
+                  setTimeout(() => handleRentalPeriodChange(), 100);
+                }}
+              >
+                {tenants.map((tenant) => (
+                  <MenuItem key={tenant.id} value={tenant.id}>
+                    {tenant.tenantName}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Lease: {currentTenant ? `${formatDate(currentTenant.leaseStartDate)} - ${formatDate(currentTenant.leaseEndDate)}` : 'Select a tenant'}
+                </Typography>
+              </Box>
+            </Grid>
 
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
-            <TextField
-              select
-              label="Invoice Type"
-              value={form.invoiceType}
-              fullWidth
-              onChange={(e) => {
-                const invoiceType = e.target.value as InvoiceType;
-                setForm((prev) => {
-                  if (!prev) return prev;
-                  const tenant = tenants.find((t) => t.id === prev.tenantId);
-                  const next = { ...prev, invoiceType };
-                  next.invoiceNumber = generateInvoiceNumber(
-                    property?.propertyAddress ?? '',
-                    tenant?.tenantName ?? '',
-                    invoiceType,
-                    existingInvoices
-                  );
-                  return next;
-                });
-              }}
-            >
-              {INVOICE_TYPES.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField label="Invoice Number" value={form.invoiceNumber} onChange={(e) => updateForm({ invoiceNumber: e.target.value })} fullWidth />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField
-              label="Invoice Date"
-              type="date"
-              value={form.invoiceDate}
-              onChange={(e) => updateForm({ invoiceDate: e.target.value })}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <TextField
-              select
-              label="Billed To (Tenant)"
-              value={form.tenantId ?? ''}
-              fullWidth
-              required
-              onChange={(e) => {
-                const tenantId = Number(e.target.value);
-                const tenant = tenants.find((t) => t.id === tenantId);
-                setForm((prev) => {
-                  if (!prev) return prev;
-                  const invoiceNumber = generateInvoiceNumber(
-                    property?.propertyAddress ?? '',
-                    tenant?.tenantName ?? '',
-                    prev.invoiceType,
-                    existingInvoices
-                  );
-                  const billingFrequency = tenant?.rentPaymentFrequency?.toLowerCase() as BillingFrequency || 'monthly';
-                  const rentalPeriodStart = tenant?.rentStartDate || prev.rentalPeriodStart;
-                  const netAmount = parseFloat(tenant?.netAmount || '0');
-                  const vatRate = tenant?.isVatRegistered ? 0.2 : 0;
-                  const vatAmount = netAmount * vatRate;
-                  const totalAmount = netAmount + vatAmount;
-                  const rentalPeriodEnd = billingFrequency === 'quarterly' ? currentQuarter.end : periodEnd(rentalPeriodStart, billingFrequency);
-                  return {
-                    ...prev,
-                    tenantId,
-                    billToName: tenant ? `${tenant.tenantName} - The Enterprise` : prev.billToName,
-                    billToAddress: tenant?.tenantCorrespondingAddress ?? prev.billToAddress,
-                    invoiceNumber,
-                    billingFrequency,
-                    rentalPeriodStart,
-                    rentalPeriodEnd,
-                    netAmount,
-                    vatAmount,
-                    totalAmount,
-                  };
-                });
-              }}
-            >
-              {tenants.map((tenant) => (
-                <MenuItem key={tenant.id} value={tenant.id}>
-                  {tenant.tenantName}
-                </MenuItem>
-              ))}
-            </TextField>
-            <Box sx={{ mt: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                Lease: {currentTenant ? `${formatDate(currentTenant.leaseStartDate)} - ${formatDate(currentTenant.leaseEndDate)}` : 'Select a tenant'}
+            <Grid item xs={12} md={6}>
+              <TextField label="Property Address" value={property.propertyAddress} fullWidth disabled />
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Company: {property.company?.name}
               </Typography>
-            </Box>
-          </Grid>
+            </Grid>
 
-          <Grid item xs={12} md={6}>
-            <TextField label="Property Address" value={property.propertyAddress} fullWidth disabled />
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Company: {property.company?.name}
-            </Typography>
-          </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField select label="Billing Frequency" value={form.billingFrequency} fullWidth disabled>
+                {BILLING_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                label="Rental Period Start"
+                type="date"
+                value={form.rentalPeriodStart}
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+                disabled
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField label="Rental Period End" type="date" value={form.rentalPeriodEnd} fullWidth InputLabelProps={{ shrink: true }} disabled />
+            </Grid>
 
-          <Grid item xs={12} md={4}>
-            <TextField select label="Billing Frequency" value={form.billingFrequency} fullWidth disabled>
-              {BILLING_OPTIONS.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField
-              label="Rental Period Start"
-              type="date"
-              value={form.rentalPeriodStart}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              disabled
-            />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField label="Rental Period End" type="date" value={form.rentalPeriodEnd} fullWidth InputLabelProps={{ shrink: true }} disabled />
-          </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField label="Net Amount" type="number" value={form.netAmount} fullWidth InputProps={{ startAdornment: <InputAdornment position="start">£</InputAdornment> }} disabled />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField label={`VAT (${currentTenant?.isVatRegistered ? '20%' : '0%'})`} value={form.vatAmount.toFixed(2)} fullWidth InputProps={{ startAdornment: <InputAdornment position="start">£</InputAdornment> }} disabled />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField label="Total Amount" value={form.totalAmount.toFixed(2)} fullWidth InputProps={{ startAdornment: <InputAdornment position="start">£</InputAdornment> }} disabled />
+            </Grid>
 
-          <Grid item xs={12} md={4}>
-            <TextField label="Net Amount" type="number" value={form.netAmount} fullWidth InputProps={{ startAdornment: <Typography sx={{ mr: 1 }}>£</Typography> }} disabled />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField label={`VAT (${currentTenant?.isVatRegistered ? '20%' : '0%'})`} value={form.vatAmount.toFixed(2)} fullWidth InputProps={{ startAdornment: <Typography sx={{ mr: 1 }}>£</Typography> }} disabled />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField label="Total Amount" value={form.totalAmount.toFixed(2)} fullWidth InputProps={{ startAdornment: <Typography sx={{ mr: 1 }}>£</Typography> }} />
-          </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Payment Made"
+                type="number"
+                value={form.paymentMade ?? 0}
+                fullWidth
+                InputProps={{ startAdornment: <InputAdornment position="start">£</InputAdornment> }}
+                onChange={(e) => updateForm({ paymentMade: Number(e.target.value) || 0 })}
+              />
+            </Grid>
+            {/* <Grid item xs={12} md={6}>
+              <TextField
+                label="Balance Due (leave blank to auto-calc)"
+                type="number"
+                value={form.balanceDue ?? ''}
+                fullWidth
+                InputProps={{ startAdornment: <InputAdornment position="start">£</InputAdornment> }}
+                onChange={(e) => updateForm({ balanceDue: e.target.value })}
+              />
+            </Grid> */}
 
-          <Grid item xs={12}>
-            <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-              Invoice Terms & Conditions
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
-                <Typography variant="body2">
-                  {form.notes.split('\n\n')[0] || 'Period calculation will appear here'}
-                </Typography>
-              </Paper>
-              <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
-                <Typography variant="body2">
-                  {form.notes.split('\n\n')[1] || 'Lease agreement details will appear here'}
-                </Typography>
-              </Paper>
-              <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
-                <Typography variant="body2">
-                  {form.notes.split('\n\n')[2] || 'Payment terms will appear here'}
-                </Typography>
-              </Paper>
-            </Box>
           </Grid>
-        </Grid>
+        </Paper>
 
-        <Divider sx={{ my: 4 }} />
+        <Paper elevation={3} sx={{ p: { xs: 2, md: 3 }, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+          <InvoicePreview
+            invoiceTitle={invoiceTitle}
+            invoiceNumber={form.invoiceNumber}
+            invoiceDate={form.invoiceDate}
+            dueDate={form.invoiceDate}
+            terms="Due on Receipt"
+            billToName={form.billToName || currentTenant?.tenantName || 'Tenant'}
+            billToAddress={form.billToAddress || currentTenant?.tenantCorrespondingAddress || property.propertyAddress}
+            propertyAddress={property.propertyAddress}
+            rentalPeriodStart={form.rentalPeriodStart}
+            rentalPeriodEnd={form.rentalPeriodEnd}
+            netAmount={form.netAmount}
+            vatAmount={form.vatAmount}
+            vatRate={currentTenant?.isVatRegistered ? 0.2 : 0}
+            totalAmount={form.totalAmount}
+            paymentMade={paymentMadeValue}
+            previousBalance={previousBalanceValue}
+            balanceDue={safeBalanceDue}
+            notes={form.notes}
+            company={property.company}
+            tenant={currentTenant || null}
+            bankDetails={bankDetails}
+          />
+        </Paper>
 
-        <Typography variant="h6" gutterBottom>
-          Bank Details
-        </Typography>
-        <Grid container spacing={2}>
-           <Grid item xs={12} md={6}>
-             <BankLine label="Account Name" value={bankDetails?.accountHolderName || 'Not available'} />
-             <BankLine label="Bank" value={bankDetails?.bankName || 'Not available'} />
-             <BankLine label="Sort Code" value={bankDetails?.sortCode || 'Not available'} />
-           </Grid>
-           <Grid item xs={12} md={6}>
-             <BankLine label="Account Number" value={bankDetails?.accountNumber || 'Not available'} />
-             <BankLine label="Bank Address" value={bankDetails?.bankAddress || 'Not available'} />
-           </Grid>
-         </Grid>
-      </Paper>
+      </Stack>
     </Container>
   );
 };
-
-const BankLine = ({ label, value }: { label: string; value: string }) => (
-  <Box sx={{ mb: 1 }}>
-    <Typography variant="caption" color="text.secondary">
-      {label}
-    </Typography>
-    <Typography variant="body1">{value}</Typography>
-  </Box>
-);
