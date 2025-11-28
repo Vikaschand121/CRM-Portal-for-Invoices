@@ -17,6 +17,18 @@ class TenantsService {
   async deleteTenant(id: number): Promise<void> {
     return api.delete<void>(`/property-management/tenants/${id}`);
   }
+
+  async archiveTenant(id: number): Promise<void> {
+    return api.patch<void>('/property-management/tenants/archive', [{ id, isArchived: true }]);
+  }
+
+  async restoreTenant(id: number): Promise<void> {
+    return api.patch<void>('/property-management/tenants/archive', [{ id, isArchived: false }]);
+  }
+
+  async getArchivedTenants(): Promise<Tenant[]> {
+    return api.get<Tenant[]>('/property-management/tenants/archived');
+  }
 }
 
 export const tenantsService = new TenantsService();

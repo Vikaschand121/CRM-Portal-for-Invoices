@@ -3,8 +3,13 @@ import { LoginPage } from '../pages/LoginPage';
 import { TwoFactorPage } from '../pages/TwoFactorPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { CompaniesPage } from '../pages/CompaniesPage';
+import { ArchivedCompaniesPage } from '../pages/ArchivedCompaniesPage';
 import { CompanyDetailPage } from '../pages/CompanyDetailPage';
 import { CompanyPropertiesPage } from '../pages/CompanyPropertiesPage';
+import { ArchivedPropertiesPage } from '../pages/ArchivedPropertiesPage';
+import { ArchivedTenantsPage } from '../pages/ArchivedTenantsPage';
+import { ArchivedInvoicesPage } from '../pages/ArchivedInvoicesPage';
+import { ArchivedDocumentsPage } from '../pages/ArchivedDocumentsPage';
 import { PropertyDetailPage } from '../pages/PropertyDetailPage';
 import { DocumentViewerPage } from '../pages/DocumentViewerPage';
 import { UsersPage } from '../pages/UsersPage';
@@ -69,9 +74,14 @@ export const AppRoutes = () => {
         <Route path="accounts-dashboard" element={<AccountsDashboardPage />} />
         <Route path="property-management" element={<PropertyManagementPage />} />
         <Route path="companies" element={<CompaniesPage />} />
+        <Route path="companies/archived" element={<ArchivedCompaniesPage />} />
         <Route path="companies/:id" element={<CompanyDetailPage />} />
         <Route path="companies/:id/properties" element={<CompanyPropertiesPage />} />
+        <Route path="companies/:id/properties/archived" element={<ArchivedPropertiesPage />} />
         <Route path="companies/:companyId/properties/:propertyId" element={<PropertyDetailPage />} />
+        <Route path="tenants/archived" element={<ArchivedTenantsPage />} />
+        <Route path="invoices/archived" element={<ArchivedInvoicesPage />} />
+        <Route path="documents/archived" element={<ArchivedDocumentsPage />} />
         <Route path="companies/:companyId/properties/:propertyId/invoices/new" element={<InvoiceCreatePage />} />
         <Route path="companies/:companyId/properties/:propertyId/invoices/:invoiceId" element={<InvoiceViewPage />} />
         <Route path="companies/:companyId/properties/:propertyId/invoices/:invoiceId/edit" element={<InvoiceEditPage />} />

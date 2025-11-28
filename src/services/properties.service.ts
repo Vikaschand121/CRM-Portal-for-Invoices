@@ -18,6 +18,18 @@ class PropertiesService {
     return api.delete<void>(`/property-management/properties/${id}`);
   }
 
+  async archiveProperty(id: number): Promise<void> {
+    return api.patch<void>('/property-management/properties/archive', [{ id, isArchived: true }]);
+  }
+
+  async restoreProperty(id: number): Promise<void> {
+    return api.patch<void>('/property-management/properties/archive', [{ id, isArchived: false }]);
+  }
+
+  async getArchivedProperties(): Promise<Property[]> {
+    return api.get<Property[]>('/property-management/properties/archived');
+  }
+
   async getBankDetails(companyId: number): Promise<BankDetails> {
     return api.get<BankDetails>(`/property-management/companies/${companyId}/bank-details`);
   }

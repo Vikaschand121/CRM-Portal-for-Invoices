@@ -63,6 +63,7 @@ export interface Property {
   company: Company;
   createdAt: string;
   updatedAt: string;
+  isArchived?: boolean;
 }
 
 export interface CreatePropertyPayload {
@@ -98,6 +99,13 @@ export interface Company {
   activeProperties?: number;
   portfolioValue?: number;
   properties?: CompanyProperty[];
+  isArchived?: boolean;
+  tenantsPercentage?: string;
+  accountHolderName?: string;
+  bankName?: string;
+  sortCode?: string;
+  accountNumber?: string;
+  bankAddress?: string;
 }
 
 export interface CreateCompanyPayload {
@@ -176,6 +184,8 @@ export interface Tenant {
   previousBalance?: number;
   createdAt?: string;
   updatedAt?: string;
+  isArchived?: boolean;
+  property?: Property;
 }
 
 export interface CreateTenantPayload {
@@ -211,6 +221,9 @@ export interface Document {
   propertyId: number;
   createdAt: string;
   updatedAt: string;
+  isArchived?: boolean;
+  property?: Property;
+  tenant?: Tenant;
 }
 
 export interface CreateDocumentPayload {
@@ -258,6 +271,9 @@ export interface Invoice {
   tenantName: string;
   createdAt: string;
   updatedAt: string;
+  isArchived?: boolean;
+  property?: Property;
+  tenant?: Tenant;
 }
 
 export interface CreateInvoicePayload {

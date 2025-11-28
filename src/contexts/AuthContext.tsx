@@ -37,31 +37,49 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const checkAuth = async () => {
-    try {
-      const user = await authService.getCurrentUser();
-      if (user) {
-        setState({
-          user,
-          isAuthenticated: true,
-          isLoading: false,
-          requires2FA: false,
-        });
-      } else {
-        setState({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-          requires2FA: false,
-        });
+    const token = api.getToken();
+    if (token) {
+      try {
+        const user = await authService.getCurrentUser();
+        if (user) {
+          setState({
+            user,
+            isAuthenticated: true,
+            isLoading: false,
+            requires2FA: false,
+          });
+          localStorage.setItem('user', JSON.stringify(user));
+          return;
+        }
+      } catch (error) {
+        // If not Unauthorized error, try to load from cache
+        if (!(error instanceof Error) || !error.message.includes('Unauthorized')) {
+          const cachedUser = localStorage.getItem('user');
+          if (cachedUser) {
+            try {
+              const user = JSON.parse(cachedUser);
+              setState({
+                user,
+                isAuthenticated: true,
+                isLoading: false,
+                requires2FA: false,
+              });
+              return;
+            } catch (parseError) {
+              // Invalid cache, continue to logout
+            }
+          }
+        }
       }
-    } catch (error) {
-      setState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        requires2FA: false,
-      });
     }
+
+    // No token or failed auth
+    setState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      requires2FA: false,
+    });
   };
 
   const login = async (credentials: LoginCredentials): Promise<LoginResult> => {
@@ -85,6 +103,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         requires2FA: false,
       });
 
+      // Persist user data
+      localStorage.setItem('user', JSON.stringify(response.user));
+
       return response;
     } catch (error) {
       throw error;
@@ -101,6 +122,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         requires2FA: false,
         isLoading: false,
       }));
+      localStorage.setItem('user', JSON.stringify(response.user));
     } catch (error) {
       throw error;
     }
@@ -110,6 +132,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       await authService.logout();
       api.setToken(null);
+      localStorage.removeItem('user');
       setState({
         user: null,
         isAuthenticated: false,
@@ -131,6 +154,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         requires2FA: false,
         isLoading: false,
       }));
+      if (user) {
+        localStorage.setItem('user', JSON.stringify(user));
+      }
     } catch (error) {
       console.error('Failed to refresh user:', error);
     }

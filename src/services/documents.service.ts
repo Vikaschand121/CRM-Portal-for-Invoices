@@ -53,6 +53,19 @@ class DocumentsService {
     return doc;
   }
 
+  async archiveDocument(id: number): Promise<void> {
+    return api.patch<void>('/property-management/documents/archive', [{ id, isArchived: true }]);
+  }
+
+  async restoreDocument(id: number): Promise<void> {
+    return api.patch<void>('/property-management/documents/archive', [{ id, isArchived: false }]);
+  }
+
+  async getArchivedDocuments(): Promise<Document[]> {
+    const docs = await api.get<Document[]>('/property-management/documents/archived');
+    return docs.map((doc) => this.normalizeDocument(doc));
+  }
+
   async deleteDocument(id: number): Promise<void> {
     return api.delete<void>(`/property-management/documents/${id}`);
   }

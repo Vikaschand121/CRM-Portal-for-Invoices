@@ -36,6 +36,7 @@ import {
   Business,
   Delete,
   Edit,
+  History,
   HomeWork,
   LocationOn,
   MonetizationOn,
@@ -207,7 +208,7 @@ export const CompanyPropertiesPage = () => {
   const handleArchive = async (propertyId: number) => {
     if (window.confirm('Are you sure you want to archive this property?')) {
       try {
-        await propertiesService.deleteProperty(propertyId);
+        await propertiesService.archiveProperty(propertyId);
         showSnackbar('Property archived successfully', 'success');
         loadProperties();
       } catch (err) {
@@ -396,8 +397,27 @@ export const CompanyPropertiesPage = () => {
                 display: 'flex',
                 gap: 1,
                 width: { xs: '100%', md: 'auto' },
-                justifyContent: { xs: 'center', md: 'flex-end' }
+                justifyContent: { xs: 'center', md: 'flex-end' },
+                flexDirection: { xs: 'column', sm: 'row' }
               }}>
+                <Button
+                  startIcon={<History />}
+                  variant="outlined"
+                  onClick={() => navigate(`/companies/${company.id}/properties/archived`)}
+                  sx={{
+                    mb: { xs: 0, md: 2 },
+                    color: 'white',
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    '&:hover': {
+                      bgcolor: 'rgba(255, 255, 255, 0.2)',
+                      borderColor: 'rgba(255, 255, 255, 0.5)',
+                    },
+                    width: { xs: '100%', sm: 'auto' },
+                    minWidth: { xs: '200px', sm: 'auto' },
+                  }}
+                >
+                  View Archived
+                </Button>
                 <Button
                   startIcon={<Add />}
                   variant="contained"

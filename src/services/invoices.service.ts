@@ -21,6 +21,18 @@ class InvoicesService {
     return result;
   }
 
+  async archiveInvoice(id: number): Promise<void> {
+    return api.patch<void>('/property-management/invoices/archive', [{ id, isArchived: true }]);
+  }
+
+  async restoreInvoice(id: number): Promise<void> {
+    return api.patch<void>('/property-management/invoices/archive', [{ id, isArchived: false }]);
+  }
+
+  async getArchivedInvoices(): Promise<Invoice[]> {
+    return api.get<Invoice[]>('/property-management/invoices/archived');
+  }
+
   async deleteInvoice(id: number): Promise<void> {
     return api.delete<void>(`/property-management/invoices/${id}`);
   }

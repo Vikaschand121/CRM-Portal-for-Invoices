@@ -31,7 +31,6 @@ import {
   LocationOn,
   People,
   TrendingUp,
-  Archive,
 } from '@mui/icons-material';
 import { Company, BankDetails, CreateBankDetailsPayload, UpdateBankDetailsPayload } from '../types';
 import { companiesService } from '../services/companies.service';
@@ -207,29 +206,6 @@ export const CompanyDetailPage = () => {
     }
   };
 
-  const handleArchive = async () => {
-    if (!company?.id) {
-      return;
-    }
-
-    if (window.confirm('Are you sure you want to archive this company?')) {
-      try {
-        await companiesService.deleteCompany(company.id);
-        setSnackbar({
-          open: true,
-          message: 'Company archived successfully',
-          severity: 'success',
-        });
-        setTimeout(() => navigate('/companies'), 1500);
-      } catch (error) {
-        setSnackbar({
-          open: true,
-          message: 'Failed to archive company',
-          severity: 'error',
-        });
-      }
-    }
-  };
 
   useEffect(() => {
     loadCompany();
@@ -432,24 +408,6 @@ export const CompanyDetailPage = () => {
                 width: { xs: '100%', md: 'auto' },
                 justifyContent: { xs: 'center', md: 'flex-end' }
               }}>
-                <Button
-                  startIcon={<Archive />}
-                  variant="outlined"
-                  onClick={handleArchive}
-                  sx={{
-                    mb: { xs: 0, md: 2 },
-                    color: 'white',
-                    borderColor: 'rgba(255, 255, 255, 0.3)',
-                    '&:hover': {
-                      bgcolor: 'rgba(255, 255, 255, 0.2)',
-                      borderColor: 'rgba(255, 255, 255, 0.5)',
-                    },
-                    width: { xs: '100%', sm: 'auto' },
-                    minWidth: { xs: '200px', sm: 'auto' },
-                  }}
-                >
-                  Archive Company
-                </Button>
                 <Button
                   startIcon={<ArrowBack />}
                   variant="contained"

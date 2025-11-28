@@ -37,6 +37,7 @@ import {
 import {
   AccountBalance,
   Add,
+  Archive,
   ArrowBack,
   Business,
   CalendarToday,
@@ -44,6 +45,7 @@ import {
   Delete,
   Description,
   Edit,
+  History,
   HomeWork,
   LocationOn,
   MonetizationOn,
@@ -188,6 +190,8 @@ export const PropertyDetailPage = () => {
   useEffect(() => {
     if (location.state?.tab === 'documents') {
       setTabValue(2); // Documents tab
+    } else if (location.state?.tab === 'invoices') {
+      setTabValue(3); // Invoices tab
     }
   }, [location.state]);
 
@@ -270,14 +274,14 @@ export const PropertyDetailPage = () => {
     setTenantDialogOpen(true);
   };
 
-  const handleDeleteTenant = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this tenant?')) {
+  const handleArchiveTenant = async (id: number) => {
+    if (window.confirm('Are you sure you want to archive this tenant?')) {
       try {
-        await tenantsService.deleteTenant(id);
-        showSnackbar('Tenant deleted successfully', 'success');
+        await tenantsService.archiveTenant(id);
+        showSnackbar('Tenant archived successfully', 'success');
         loadData();
       } catch (err) {
-        showSnackbar('Failed to delete tenant', 'error');
+        showSnackbar('Failed to archive tenant', 'error');
       }
     }
   };
@@ -338,6 +342,18 @@ export const PropertyDetailPage = () => {
     }
   };
 
+  const handleArchiveDocument = async (documentId: number) => {
+    if (window.confirm('Are you sure you want to archive this document?')) {
+      try {
+        await documentsService.archiveDocument(documentId);
+        showSnackbar('Document archived successfully', 'success');
+        loadData();
+      } catch (err) {
+        showSnackbar('Failed to archive document', 'error');
+      }
+    }
+  };
+
   const handleSaveDocument = async () => {
     // Validation
     if (!documentForm.documentName.trim()) {
@@ -374,6 +390,18 @@ export const PropertyDetailPage = () => {
 
   const handleEditInvoice = (invoiceId: number) => {
     navigate(`/companies/${companyId}/properties/${propertyId}/invoices/${invoiceId}/edit`);
+  };
+
+  const handleArchiveInvoice = async (invoiceId: number) => {
+    if (window.confirm('Are you sure you want to archive this invoice?')) {
+      try {
+        await invoicesService.archiveInvoice(invoiceId);
+        showSnackbar('Invoice archived successfully', 'success');
+        loadData();
+      } catch (err) {
+        showSnackbar('Failed to archive invoice', 'error');
+      }
+    }
   };
 
   const handleDeleteInvoice = (invoiceId: number) => {
@@ -825,9 +853,18 @@ export const PropertyDetailPage = () => {
         <Box sx={{ mt: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Tenants</Typography>
-            <Button variant="contained" startIcon={<Add />} onClick={handleAddTenant}>
-              Add Tenant
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<History />}
+                onClick={() => navigate('/tenants/archived', { state: { fromProperty: propertyId, fromCompany: companyId, tab: 'tenants' } })}
+              >
+                View Archived
+              </Button>
+              <Button variant="contained" startIcon={<Add />} onClick={handleAddTenant}>
+                Add Tenant
+              </Button>
+            </Box>
           </Box>
           <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
             <Table>
@@ -855,8 +892,8 @@ export const PropertyDetailPage = () => {
                       <IconButton onClick={() => handleEditTenant(tenant)}>
                         <Edit />
                       </IconButton>
-                      <IconButton onClick={() => handleDeleteTenant(tenant.id)}>
-                        <Delete />
+                      <IconButton onClick={() => handleArchiveTenant(tenant.id)}>
+                        <Archive />
                       </IconButton>
                     </TableCell>
                   </TableRow>
@@ -871,9 +908,18 @@ export const PropertyDetailPage = () => {
         <Box sx={{ mt: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Documents</Typography>
-            <Button variant="contained" startIcon={<CloudUpload />} onClick={handleAddDocument}>
-              Upload Document
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<History />}
+                onClick={() => navigate('/documents/archived', { state: { fromProperty: propertyId, fromCompany: companyId, tab: 'documents' } })}
+              >
+                View Archived
+              </Button>
+              <Button variant="contained" startIcon={<CloudUpload />} onClick={handleAddDocument}>
+                Upload Document
+              </Button>
+            </Box>
           </Box>
           <Box
             sx={{
@@ -942,8 +988,8 @@ export const PropertyDetailPage = () => {
                     </Box>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                    <IconButton onClick={() => { setDeleteDocumentId(doc.id); setDeleteDialogOpen(true); }} sx={{ color: 'error.main' }}>
-                      <Delete />
+                    <IconButton onClick={() => handleArchiveDocument(doc.id)} sx={{ color: 'warning.main' }}>
+                      <Archive />
                     </IconButton>
                     <IconButton onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}/documents/${doc.id}`)} sx={{ color: 'primary.main' }}>
                       <Visibility />
@@ -960,9 +1006,18 @@ export const PropertyDetailPage = () => {
         <Box sx={{ mt: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Invoices</Typography>
-            <Button variant="contained" startIcon={<Add />} onClick={handleAddInvoice}>
-              Add Invoice
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<History />}
+                onClick={() => navigate('/invoices/archived', { state: { fromProperty: propertyId, fromCompany: companyId, tab: 'invoices' } })}
+              >
+                View Archived
+              </Button>
+              <Button variant="contained" startIcon={<Add />} onClick={handleAddInvoice}>
+                Add Invoice
+              </Button>
+            </Box>
           </Box>
           <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
             <Table>
@@ -987,8 +1042,8 @@ export const PropertyDetailPage = () => {
                       <IconButton onClick={() => handleEditInvoice(invoice.id)}>
                         <Edit />
                       </IconButton>
-                      <IconButton onClick={() => handleDeleteInvoice(invoice.id)}>
-                        <Delete />
+                      <IconButton onClick={() => handleArchiveInvoice(invoice.id)}>
+                        <Archive />
                       </IconButton>
                     </TableCell>
                   </TableRow>

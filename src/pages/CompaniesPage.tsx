@@ -35,6 +35,7 @@ import {
   Visibility,
   ArrowBack,
   Archive,
+  History,
 } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -132,10 +133,10 @@ export const CompaniesPage = () => {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
+  const handleArchive = async (id: number) => {
     if (window.confirm('Are you sure you want to archive this company?')) {
       try {
-        await companiesService.deleteCompany(id);
+        await companiesService.archiveCompany(id);
         showSuccess('Company archived successfully');
         loadCompanies();
       } catch (error) {
@@ -184,21 +185,34 @@ export const CompaniesPage = () => {
               Manage your company records and information
             </Typography>
           </Box>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={handleAdd}
-            fullWidth={isMobile}
-            sx={{
-              minWidth: { xs: '100%', sm: 140 },
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-              },
-            }}
-          >
-            Add Company
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1, flexDirection: { xs: 'column', sm: 'row' } }}>
+            <Button
+              variant="outlined"
+              startIcon={<History />}
+              onClick={() => navigate('/companies/archived')}
+              fullWidth={isMobile}
+              sx={{
+                minWidth: { xs: '100%', sm: 140 },
+              }}
+            >
+              View Archived
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleAdd}
+              fullWidth={isMobile}
+              sx={{
+                minWidth: { xs: '100%', sm: 140 },
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                },
+              }}
+            >
+              Add Company
+            </Button>
+          </Box>
         </Box>
       </Box>
 
@@ -299,7 +313,7 @@ export const CompaniesPage = () => {
                       </IconButton>
                       <IconButton
                         size="small"
-                        onClick={() => handleDelete(company.id!)}
+                        onClick={() => handleArchive(company.id!)}
                         color="error"
                         title="Archive"
                       >
