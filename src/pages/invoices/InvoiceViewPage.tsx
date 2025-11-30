@@ -135,6 +135,7 @@ export const InvoiceViewPage = () => {
         billToName={invoice.billToName || invoice.tenantName || 'Tenant'}
         billToAddress={invoice.billToAddress || tenant?.tenantCorrespondingAddress || ''}
         propertyAddress={property.propertyAddress}
+        propertyName={property.propertyName}
         rentalPeriodStart={invoice.rentalPeriodStart}
         rentalPeriodEnd={invoice.rentalPeriodEnd}
         netAmount={invoice.netAmount}

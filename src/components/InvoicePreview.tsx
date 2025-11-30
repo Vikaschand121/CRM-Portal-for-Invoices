@@ -15,11 +15,21 @@ const formatCurrency = (value?: number | null) => {
   return GBP_FORMATTER.format(Number(value));
 };
 
+export const DEFAULT_LEASE_REMINDER_TEXT =
+  'PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED DUE DATE, OR WITHIN 7 DAYS WHERE A DUE DATE IS NOT STATED, OR PRIOR AGREEMENT REACHED, OUR SOLICITORS WILL BE INSTRUCTED TO COLLECT THE AMOUNT OUTSTANDING IN ACCORDANCE WITH THE TERMS OF THE LEASE.';
+
 const formatDate = (value?: string) => {
   if (!value) return '--';
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return '--';
   return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const formatLeaseAgreementDate = (value?: string) => {
+  if (!value) return 'N/A';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'N/A';
+  return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
 const formatAddressLines = (value?: string) => {
@@ -70,6 +80,7 @@ export interface InvoicePreviewProps {
   billToName: string;
   billToAddress: string;
   propertyAddress: string;
+  propertyName: string;
   rentalPeriodStart: string;
   rentalPeriodEnd: string;
   netAmount: number;
@@ -94,6 +105,7 @@ export const InvoicePreview = ({
   billToName,
   billToAddress,
   propertyAddress,
+  propertyName,
   rentalPeriodStart,
   rentalPeriodEnd,
   netAmount,
@@ -191,13 +203,17 @@ export const InvoicePreview = ({
             <Typography variant="body1" fontWeight={700}>
               {billToName || tenant?.tenantName || 'Tenant'}
             </Typography>
+            <Typography variant="body2" fontWeight="bold" sx={{ mt: 1 }}>
+              {tenant ? `${tenant.tenantName}${propertyName ? ` - ${propertyName}` : ''}` : propertyName || 'Property'}
+            </Typography>
             {formatAddressLines(billToAddress).map((line, idx) => (
               <Typography key={idx} variant="body2" color="text.secondary">
                 {line}
               </Typography>
             ))}
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Property Address
+           
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontWeight: 700 }}>
+              {`${invoiceTitle} Property Address`}
             </Typography>
             {formatAddressLines(propertyAddress).map((line, idx) => (
               <Typography key={idx} variant="body2">
@@ -295,13 +311,28 @@ export const InvoicePreview = ({
 
       <Divider sx={{ my: 3 }} />
 
-      <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
-        Lease agreed between {company?.name || 'Company'} and {tenant?.tenantName || 'Tenant'}
-      </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>
-        {notes ||
-          'PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED DUE DATE, OUR SOLICITORS WILL BE INSTRUCTED TO COLLECT THE AMOUNT OUTSTANDING IN ACCORDANCE WITH THE TERMS OF THE LEASE.'}
-      </Typography>
+      <Box sx={{ mt: 4, textAlign: 'center' }}>
+        <Typography variant="h6" fontWeight={700} sx={{ letterSpacing: 0.4 }}>
+          {`Lease agreed between ${company?.name || 'Company'} and ${tenant?.tenantName || 'Tenant'}${
+            propertyName ? ` - ${propertyName}` : ''
+          } on ${formatLeaseAgreementDate(tenant?.leaseStartDate)}`}
+        </Typography>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{
+            textTransform: 'uppercase',
+            mt: 3,
+            letterSpacing: 0.5,
+            lineHeight: 1.6,
+            maxWidth: 760,
+            mx: 'auto',
+            whiteSpace: 'pre-line',
+          }}
+        >
+          {(notes?.trim() || DEFAULT_LEASE_REMINDER_TEXT).toUpperCase()}
+        </Typography>
+      </Box>
     </Box>
   );
 };

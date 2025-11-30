@@ -11,16 +11,21 @@ import {
   Typography,
 } from '@mui/material';
 import { ArrowBack, DeleteForever } from '@mui/icons-material';
-import { Invoice } from '../../types';
+import { Invoice, Property, Tenant } from '../../types';
 import { invoicesService } from '../../services/invoices.service';
+import { propertiesService } from '../../services/properties.service';
+import { tenantsService } from '../../services/tenants.service';
 
 export const InvoiceDeletePage = () => {
   const { companyId, propertyId, invoiceId } = useParams<{ companyId: string; propertyId: string; invoiceId: string }>();
+  const numericPropertyId = Number(propertyId);
   const numericInvoiceId = Number(invoiceId);
 
   const navigate = useNavigate();
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [property, setProperty] = useState<Property | null>(null);
+  const [tenant, setTenant] = useState<Tenant | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +33,7 @@ export const InvoiceDeletePage = () => {
   useEffect(() => {
     let cancelled = false;
 
-    const loadInvoice = async () => {
+    const loadPage = async () => {
       if (!numericInvoiceId) {
         setError('Invalid invoice ID');
         setLoading(false);
@@ -37,21 +42,35 @@ export const InvoiceDeletePage = () => {
 
       try {
         setLoading(true);
-        const invoiceData = await invoicesService.getInvoice(numericInvoiceId);
+        const [invoiceData, properties, tenants] = await Promise.all([
+          invoicesService.getInvoice(numericInvoiceId),
+          propertiesService.getProperties(),
+          tenantsService.getTenants(numericPropertyId),
+        ]);
         if (cancelled) return;
+
+        const foundProperty = properties.find((p) => p.id === numericPropertyId);
+        if (!foundProperty) {
+          throw new Error('Property not found');
+        }
+        setProperty(foundProperty);
+
+        const foundTenant = tenants.find((t) => t.id === invoiceData.tenantId);
+        setTenant(foundTenant || null);
+
         setInvoice(invoiceData);
       } catch (err: any) {
-        if (!cancelled) setError(err?.message ?? 'Failed to load invoice');
+        if (!cancelled) setError(err?.message ?? 'Failed to load invoice data');
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
 
-    loadInvoice();
+    loadPage();
     return () => {
       cancelled = true;
     };
-  }, [numericInvoiceId]);
+  }, [numericInvoiceId, numericPropertyId]);
 
   const handleDelete = async () => {
     if (!invoice) return;
@@ -77,7 +96,7 @@ export const InvoiceDeletePage = () => {
     );
   }
 
-  if (error || !invoice) {
+  if (error || !invoice || !property) {
     return (
       <Container maxWidth="md" sx={{ py: 6 }}>
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -116,6 +135,9 @@ export const InvoiceDeletePage = () => {
           </Typography>
           <Typography variant="body2">
             <strong>Date:</strong> {new Date(invoice.invoiceDate).toLocaleDateString()}
+          </Typography>
+          <Typography variant="body2" fontWeight="bold">
+            {tenant?.tenantName}-{property.propertyName}
           </Typography>
         </Box>
 

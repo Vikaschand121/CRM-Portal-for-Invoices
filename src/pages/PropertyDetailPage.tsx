@@ -60,6 +60,7 @@ import { documentsService } from '../services/documents.service';
 import { invoicesService } from '../services/invoices.service';
 import { useSnackbar } from '../hooks/useSnackbar';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import { getQuarterRange } from '../utils/quarter';
 
 
 const GBP_FORMATTER = new Intl.NumberFormat('en-GB', {
@@ -115,6 +116,8 @@ export const PropertyDetailPage = () => {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string>('');
   const [tenantDialogOpen, setTenantDialogOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [tenantForm, setTenantForm] = useState<CreateTenantPayload>({
@@ -200,18 +203,45 @@ export const PropertyDetailPage = () => {
     setTenantForm(prev => ({ ...prev, netAmount }));
   }, [tenantForm.aggreedAnnualRent, tenantForm.rentPaymentFrequency]);
 
+  useEffect(() => {
+    let filtered = invoices;
+
+    if (filterStatus) {
+      filtered = filtered.filter(invoice => {
+        const balance = parseFloat(invoice.balanceDue || '0');
+        if (filterStatus === 'paid') return balance === 0;
+        if (filterStatus === 'unpaid') return balance === invoice.totalAmount;
+        if (filterStatus === 'partial') return balance > 0 && balance < invoice.totalAmount;
+        return true;
+      });
+    }
+
+    setFilteredInvoices(filtered);
+  }, [invoices, filterStatus]);
+
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
-  const calculateNetAmount = (annualRent?: string, frequency?: RentPaymentFrequency): string => {
-    if (!annualRent || !frequency) return '';
-    const rent = parseFloat(annualRent);
-    if (isNaN(rent)) return '';
-    if (frequency === 'MONTHLY') return (rent / 12).toFixed(0);
-    if (frequency === 'QUARTERLY') return (rent / 4).toFixed(0);
-    return '';
-  };
+const calculateNetAmount = (annualRent?: string, frequency?: RentPaymentFrequency): string => {
+  if (!annualRent || !frequency) return '';
+  const rent = parseFloat(annualRent);
+  if (isNaN(rent)) return '';
+  if (frequency === 'MONTHLY') return (rent / 12).toFixed(0);
+  if (frequency === 'QUARTERLY') return (rent / 4).toFixed(0);
+  return '';
+};
+
+const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload => {
+  if (form.rentPaymentFrequency !== 'QUARTERLY' || !form.rentStartDate) {
+    return form;
+  }
+  const quarterRange = getQuarterRange(form.rentStartDate);
+  if (!quarterRange.start) {
+    return form;
+  }
+  return { ...form, rentStartDate: quarterRange.start };
+};
 
   // Tenant handlers
   const handleAddTenant = () => {
@@ -303,11 +333,12 @@ export const PropertyDetailPage = () => {
     }
 
     try {
+      const payload = normalizeTenantPayload(tenantForm);
       if (editingTenant) {
-        await tenantsService.updateTenant(editingTenant.id, tenantForm);
+        await tenantsService.updateTenant(editingTenant.id, payload);
         showSnackbar('Tenant updated successfully', 'success');
       } else {
-        await tenantsService.createTenant(tenantForm);
+        await tenantsService.createTenant(payload);
         showSnackbar('Tenant created successfully', 'success');
       }
       setTenantDialogOpen(false);
@@ -459,9 +490,9 @@ export const PropertyDetailPage = () => {
       icon: People,
     },
     {
-      label: 'Outstanding Invoices',
-      value: 1,
-      // helper: 'Uploaded Documents',
+      label: 'Invoices',
+      value: invoices.length.toString(),
+      helper: 'Total Invoices',
       icon: ReceiptLongIcon,
     },
   ];
@@ -1005,8 +1036,25 @@ export const PropertyDetailPage = () => {
       {tabValue === 3 && (
         <Box sx={{ mt: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">Invoices</Typography>
+            
             <Box sx={{ display: 'flex', gap: 1 }}>
+            <Typography variant="h6">Invoices</Typography>
+                <TextField
+                  label="Status"
+                  select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  fullWidth
+                  size="small"
+                >
+                  <MenuItem value="">All</MenuItem>
+                  <MenuItem value="paid">Paid</MenuItem>
+                  <MenuItem value="unpaid">Unpaid</MenuItem>
+                  <MenuItem value="partial">Partial</MenuItem>
+                </TextField>
+</Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              
               <Button
                 variant="outlined"
                 startIcon={<History />}
@@ -1017,8 +1065,12 @@ export const PropertyDetailPage = () => {
               <Button variant="contained" startIcon={<Add />} onClick={handleAddInvoice}>
                 Add Invoice
               </Button>
+             
             </Box>
           </Box>
+
+          {/* Filters */}
+      
           <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
             <Table>
               <TableHead sx={{ bgcolor: 'success.main' }}>
@@ -1030,7 +1082,7 @@ export const PropertyDetailPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {invoices.map((invoice) => (
+                {filteredInvoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell>{invoice.invoiceNumber}</TableCell>
                     <TableCell>{new Date(invoice.invoiceDate).toLocaleDateString()}</TableCell>

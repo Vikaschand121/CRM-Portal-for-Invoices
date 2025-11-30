@@ -20,7 +20,8 @@ import { propertiesService } from '../../services/properties.service';
 import { tenantsService } from '../../services/tenants.service';
 import { invoicesService } from '../../services/invoices.service';
 import { useSnackbar } from '../../hooks/useSnackbar';
-import { InvoicePreview } from '../../components/InvoicePreview';
+import { InvoicePreview, DEFAULT_LEASE_REMINDER_TEXT } from '../../components/InvoicePreview';
+import { getQuarterRange } from '../../utils/quarter';
 
 type WorkspaceMode = 'create' | 'edit';
 
@@ -34,7 +35,7 @@ interface InvoiceFormState {
   invoiceDate: string;
   rentalPeriodStart: string;
   rentalPeriodEnd: string;
-  tenantId: number | null;
+  tenantId: string | null;
   companyId: number | null;
   propertyId: number;
   netAmount: number;
@@ -80,7 +81,7 @@ const iso = (value: Date | string) => {
 const periodEnd = (start: string, freq: BillingFrequency) => {
   if (!start) return '';
   if (freq === 'quarterly') {
-    return currentQuarter.end;
+    return getQuarterRange(start).end;
   }
   const base = new Date(start);
   if (Number.isNaN(base.getTime())) return '';
@@ -91,38 +92,19 @@ const periodEnd = (start: string, freq: BillingFrequency) => {
   return iso(end);
 };
 
+const computeRentalPeriodRange = (start: string, freq: BillingFrequency) => {
+  if (!start) return { start: '', end: '' };
+  const quarterRange = freq === 'quarterly' ? getQuarterRange(start) : null;
+  const alignedStart = quarterRange?.start || start;
+  return { start: alignedStart, end: periodEnd(alignedStart, freq) };
+};
+
 const formatDate = (value?: string) => {
   if (!value) return '--';
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return '--';
   return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 };
-
-const getQuarterDates = (dateStr: string) => {
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return { start: '', end: '' };
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const day = date.getDate();
-
-  let start: string, end: string;
-  if ((month === 2 && day >= 25) || month === 3 || month === 4 || (month === 5 && day <= 23)) {
-    start = `${year}-03-25`;
-    end = `${year}-06-23`;
-  } else if ((month === 5 && day >= 24) || month === 6 || month === 7 || (month === 8 && day <= 28)) {
-    start = `${year}-06-24`;
-    end = `${year}-09-28`;
-  } else if ((month === 8 && day >= 29) || month === 9 || month === 10 || (month === 11 && day <= 24)) {
-    start = `${year}-09-29`;
-    end = `${year}-12-24`;
-  } else {
-    start = `${year}-12-25`;
-    end = `${year + 1}-03-24`;
-  }
-  return { start, end };
-};
-
-const currentQuarter = getQuarterDates(iso(new Date()));
 
 const abbreviate = (value: string, length: number, fallback: string) => {
   const cleaned = (value || '').replace(/[^A-Za-z]/g, '').toUpperCase();
@@ -159,14 +141,15 @@ const generateInvoiceNumber = (
 
 const buildInitialForm = (propertyId: number, companyId: number | null, tenantId: number | null): InvoiceFormState => {
   const today = iso(new Date());
+  const initialRange = computeRentalPeriodRange(today, 'monthly');
   return {
     invoiceNumber: `TEMP-${propertyId}-${Date.now().toString().slice(-4)}`,
     invoiceType: 'rental',
     billingFrequency: 'monthly',
     invoiceDate: today,
-    rentalPeriodStart: today,
-    rentalPeriodEnd: periodEnd(today, 'monthly'),
-    tenantId,
+    rentalPeriodStart: initialRange.start || today,
+    rentalPeriodEnd: initialRange.end,
+    tenantId: tenantId ? tenantId.toString() : null,
     companyId,
     propertyId,
     netAmount: 0,
@@ -205,7 +188,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
   const [error, setError] = useState<string | null>(null);
 
   const currentTenant = useMemo(
-    () => tenants.find((tenant) => tenant.id === form?.tenantId),
+    () => tenants.find((tenant) => tenant.id.toString() === form?.tenantId),
     [tenants, form?.tenantId]
   );
 
@@ -255,7 +238,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             invoiceDate: target.invoiceDate,
             rentalPeriodStart: target.rentalPeriodStart,
             rentalPeriodEnd: target.rentalPeriodEnd,
-            tenantId: target.tenantId,
+            tenantId: target.tenantId.toString(),
             companyId: foundProperty.company?.id ?? numericCompanyId,
             propertyId: numericPropertyId,
             netAmount: target.netAmount,
@@ -306,28 +289,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
     updateForm({ notes });
   };
 
-  const generateNotes = () => {
-    if (!form || !property) return '';
-
-    const startDate = new Date(form.rentalPeriodStart);
-    const endDate = new Date(form.rentalPeriodEnd);
-    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    const rentPerDay = form.netAmount / daysDiff;
-
-    const startStr = startDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const endStr = endDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const tenant = tenants.find(t => t.id === form.tenantId);
-    const leaseStartStr = tenant
-      ? new Date(tenant.leaseStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
-      : 'N/A';
-    const propertyLabel = property.propertyName || property.propertyAddress || 'Property';
-
-    return `Rent payable ${startStr} to ${endStr}. Rent per day is ${rentPerDay.toFixed(2)}.
-
-Lease agreed between ${property.company?.name || 'Company'} and ${tenant?.tenantName || 'Tenant'} on ${leaseStartStr}
-
-PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED DUE DATE, OR WITHIN 7 DAYS WHERE A DUE DATE IS NOT STATED, OR PRIOR AGREEMENT REACHED, OUR SOLICITORS WILL BE INSTRUCTED TO COLLECT THE AMOUNT OUTSTANDING IN ACCORDANCE WITH THE TERMS OF THE LEASE.`;
-  };
+  const generateNotes = () => DEFAULT_LEASE_REMINDER_TEXT;
 
   const resolveInvoiceType = (invoiceType: InvoiceType): string => {
     switch (invoiceType) {
@@ -382,7 +344,7 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
           : '';
 
       const payload = {
-        tenantId: form.tenantId,
+        tenantId: form.tenantId ? Number(form.tenantId) : null,
         propertyId: form.propertyId,
         invoiceName: INVOICE_TYPES.find((type) => type.value === form.invoiceType)?.label ?? 'Invoice',
         invoiceType: resolvedInvoiceType,
@@ -487,7 +449,7 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
                   const invoiceType = e.target.value as InvoiceType;
                   setForm((prev) => {
                     if (!prev) return prev;
-                    const tenant = tenants.find((t) => t.id === prev.tenantId);
+                    const tenant = tenants.find((t) => t.id.toString() === prev.tenantId);
                     const next = { ...prev, invoiceType };
                     next.invoiceNumber = generateInvoiceNumber(
                       property?.propertyAddress ?? '',
@@ -524,12 +486,12 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
               <TextField
                 select
                 label="Billed To (Tenant)"
-                value={form.tenantId ?? ''}
+                value={form.tenantId || ''}
                 fullWidth
                 required
                 onChange={(e) => {
-                  const tenantId = Number(e.target.value);
-                  const tenant = tenants.find((t) => t.id === tenantId);
+                  const tenantId = e.target.value;
+                  const tenant = tenants.find((t) => t.id.toString() === tenantId);
                   setForm((prev) => {
                     if (!prev) return prev;
                     const invoiceNumber = generateInvoiceNumber(
@@ -539,16 +501,18 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
                       existingInvoices
                     );
                     const billingFrequency = (tenant?.rentPaymentFrequency?.toLowerCase() as BillingFrequency) || 'monthly';
-                    const rentalPeriodStart = tenant?.rentStartDate || prev.rentalPeriodStart;
+                    const baseStart = tenant?.rentStartDate || prev.rentalPeriodStart || '';
+                    const periodRange = computeRentalPeriodRange(baseStart, billingFrequency);
+                    const rentalPeriodStart = periodRange.start || prev.rentalPeriodStart;
                     const netAmount = parseFloat(tenant?.netAmount || '0');
                     const vatRate = tenant?.isVatRegistered ? 0.2 : 0;
                     const vatAmount = netAmount * vatRate;
                     const totalAmount = netAmount + vatAmount;
-                    const rentalPeriodEnd = billingFrequency === 'quarterly' ? currentQuarter.end : periodEnd(rentalPeriodStart, billingFrequency);
+                    const rentalPeriodEnd = periodRange.end || prev.rentalPeriodEnd;
                     return {
                       ...prev,
                       tenantId,
-                      billToName: tenant ? `${tenant.tenantName} - The Enterprise` : prev.billToName,
+                      billToName: tenant ? `${tenant.tenantName}` : prev.billToName,
                       billToAddress: tenant?.tenantCorrespondingAddress ?? prev.billToAddress,
                       invoiceNumber,
                       billingFrequency,
@@ -563,7 +527,7 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
                 }}
               >
                 {tenants.map((tenant) => (
-                  <MenuItem key={tenant.id} value={tenant.id}>
+                  <MenuItem key={tenant.id} value={tenant.id.toString()}>
                     {tenant.tenantName}
                   </MenuItem>
                 ))}
@@ -580,6 +544,27 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 Company: {property.company?.name}
               </Typography>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Bill To Name"
+                value={form.billToName}
+                onChange={(e) => updateForm({ billToName: e.target.value })}
+                fullWidth
+                required
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Bill To Address"
+                value={form.billToAddress}
+                onChange={(e) => updateForm({ billToAddress: e.target.value })}
+                fullWidth
+                multiline
+                rows={3}
+                required
+              />
             </Grid>
 
             <Grid item xs={12} md={4}>
@@ -649,6 +634,7 @@ PLEASE NOTE: NO REMINDERS WILL BE SENT. IF PAYMENT IS NOT RECEIVED BY THE STATED
             billToName={form.billToName || currentTenant?.tenantName || 'Tenant'}
             billToAddress={form.billToAddress || currentTenant?.tenantCorrespondingAddress || property.propertyAddress}
             propertyAddress={property.propertyAddress}
+            propertyName={property.propertyName}
             rentalPeriodStart={form.rentalPeriodStart}
             rentalPeriodEnd={form.rentalPeriodEnd}
             netAmount={form.netAmount}
