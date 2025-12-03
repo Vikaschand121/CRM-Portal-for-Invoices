@@ -6,6 +6,12 @@ import { CompaniesPage } from '../pages/CompaniesPage';
 import { ArchivedCompaniesPage } from '../pages/ArchivedCompaniesPage';
 import { CompanyDetailPage } from '../pages/CompanyDetailPage';
 import { CompanyPropertiesPage } from '../pages/CompanyPropertiesPage';
+import { CompanyDocumentsPage } from '../pages/CompanyDocumentsPage';
+import { DocumentTypePage } from '../pages/DocumentTypePage';
+import { DocumentSubTypePage } from '../pages/DocumentSubTypePage';
+import { CompanyArchivedDocumentsPage } from '../pages/CompanyArchivedDocumentsPage';
+import { ArchivedDocumentTypePage } from '../pages/ArchivedDocumentTypePage';
+import { ArchivedDocumentSubTypePage } from '../pages/ArchivedDocumentSubTypePage';
 import { ArchivedPropertiesPage } from '../pages/ArchivedPropertiesPage';
 import { ArchivedTenantsPage } from '../pages/ArchivedTenantsPage';
 import { ArchivedInvoicesPage } from '../pages/ArchivedInvoicesPage';
@@ -76,6 +82,12 @@ export const AppRoutes = () => {
         <Route path="companies" element={<CompaniesPage />} />
         <Route path="companies/archived" element={<ArchivedCompaniesPage />} />
         <Route path="companies/:id" element={<CompanyDetailPage />} />
+        <Route path="companies/:companyId/documents" element={<CompanyDocumentsPage />} />
+        <Route path="companies/:companyId/documents/type/:documentType" element={<DocumentTypePage />} />
+        <Route path="companies/:companyId/documents/subtype/:documentSubType" element={<DocumentSubTypePage />} />
+        <Route path="companies/:companyId/documents/archived" element={<CompanyArchivedDocumentsPage />} />
+        <Route path="companies/:companyId/documents/archived/type/:documentType" element={<ArchivedDocumentTypePage />} />
+        <Route path="companies/:companyId/documents/archived/subtype/:documentSubType" element={<ArchivedDocumentSubTypePage />} />
         <Route path="companies/:id/properties" element={<CompanyPropertiesPage />} />
         <Route path="companies/:id/properties/archived" element={<ArchivedPropertiesPage />} />
         <Route path="companies/:companyId/properties/:propertyId" element={<PropertyDetailPage />} />

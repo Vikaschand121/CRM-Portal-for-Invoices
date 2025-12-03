@@ -21,26 +21,32 @@ import {
   useTheme,
   useMediaQuery,
   Chip,
+  MenuItem,
+  CircularProgress,
 } from '@mui/material';
-import Grid from '@mui/material/Grid';
 import {
   Add,
   Edit,
-  Delete,
   Business,
   CalendarToday,
-  LocationOn,
   Person,
-  AccountBalance,
   Visibility,
   ArrowBack,
   Archive,
   History,
+  CloudUpload,
 } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { Company, CreateCompanyPayload, UpdateCompanyPayload } from '../types';
+import {
+  Company,
+  CompanyProperty,
+  CreateCompanyPayload,
+  CreateDocumentPayload,
+  UpdateCompanyPayload,
+} from '../types';
 import { companiesService } from '../services/companies.service';
+import { documentsService } from '../services/documents.service';
 import { formatDate } from '../utils/helpers';
 import { showSuccess, showError } from '../utils/snackbar';
 
@@ -58,6 +64,23 @@ const validationSchema = Yup.object({
   vatNumber: Yup.string().required('VAT number is required'),
 });
 
+const COMPANY_DOCUMENT_TYPES = [
+  'Company Incorporation Certificate',
+  'Company Confirmation Statement',
+  'Company Vat Certificate',
+];
+
+const CONFIRMATION_STATEMENT_START_YEAR = 2021;
+const CONFIRMATION_STATEMENT_YEARS = Array.from(
+  { length: new Date().getFullYear() - CONFIRMATION_STATEMENT_START_YEAR + 1 },
+  (_, index) => (CONFIRMATION_STATEMENT_START_YEAR + index).toString()
+);
+
+interface CompanyDocumentForm extends Omit<CreateDocumentPayload, 'propertyId' | 'file'> {
+  documentSubType?: string;
+  files: File[];
+}
+
 export const CompaniesPage = () => {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -68,6 +91,18 @@ export const CompaniesPage = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
+  const [documentDialogLoading, setDocumentDialogLoading] = useState(false);
+  const [documentUploading, setDocumentUploading] = useState(false);
+  const [selectedCompanyForDocument, setSelectedCompanyForDocument] = useState<Company | null>(null);
+  const [companyProperties, setCompanyProperties] = useState<CompanyProperty[]>([]);
+  const [documentForm, setDocumentForm] = useState<CompanyDocumentForm>({
+    documentName: '',
+    documentType: COMPANY_DOCUMENT_TYPES[0],
+    documentSubType: '',
+    companyId: undefined,
+    files: [],
+  });
 
   const formik = useFormik({
     initialValues: {
@@ -142,6 +177,96 @@ export const CompaniesPage = () => {
       } catch (error) {
         showError('Failed to archive company');
       }
+    }
+  };
+
+  const resetDocumentForm = () => {
+    setDocumentForm({
+      documentName: '',
+      documentType: COMPANY_DOCUMENT_TYPES[0],
+      documentSubType: '',
+      companyId: undefined,
+      files: [],
+    });
+  };
+
+  const handleOpenDocumentDialog = async (company: Company) => {
+    if (!company.id) {
+      showError('Company id is missing');
+      return;
+    }
+    setSelectedCompanyForDocument(company);
+    setDocumentDialogOpen(true);
+    setDocumentDialogLoading(true);
+    setCompanyProperties([]);
+    try {
+      const companyDetails =
+        company.properties && company.properties.length > 0
+          ? company
+          : await companiesService.getCompany(company.id);
+      const properties = companyDetails.properties ?? [];
+      setCompanyProperties(properties);
+      setSelectedCompanyForDocument(companyDetails);
+      setDocumentForm({
+        documentName: '',
+        documentType: COMPANY_DOCUMENT_TYPES[0],
+        documentSubType: '',
+        companyId: companyDetails.id,
+        files: [],
+      });
+    } catch (error) {
+      showError('Failed to load company details');
+      setDocumentDialogOpen(false);
+    } finally {
+      setDocumentDialogLoading(false);
+    }
+  };
+
+  const handleCloseDocumentDialog = () => {
+    setDocumentDialogOpen(false);
+    setSelectedCompanyForDocument(null);
+    setCompanyProperties([]);
+    resetDocumentForm();
+  };
+
+  const handleSaveDocument = async () => {
+    if (!selectedCompanyForDocument) return;
+
+    if (!documentForm.documentName.trim()) {
+      showError('Document name is required');
+      return;
+    }
+    if (!documentForm.documentType.trim()) {
+      showError('Document type is required');
+      return;
+    }
+    if (documentForm.documentType === 'Company Confirmation Statement' && !documentForm.documentSubType) {
+      showError('Please select a year for the confirmation statement');
+      return;
+    }
+    if (documentForm.files.length === 0) {
+      showError('Please select files to upload');
+      return;
+    }
+
+    setDocumentUploading(true);
+    try {
+      for (const file of documentForm.files) {
+        await documentsService.createDocument({
+          documentName: documentForm.documentName.trim(),
+          documentType: documentForm.documentType,
+          documentSubType: documentForm.documentSubType,
+          companyId: selectedCompanyForDocument.id,
+          propertyId: undefined,
+          file: file,
+        });
+      }
+      showSuccess(`${documentForm.files.length} document(s) uploaded successfully`);
+      handleCloseDocumentDialog();
+    } catch (error) {
+      showError('Failed to upload documents');
+    } finally {
+      setDocumentUploading(false);
     }
   };
 
@@ -302,6 +427,14 @@ export const CompaniesPage = () => {
                         title="View Details"
                       >
                         <Visibility />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOpenDocumentDialog(company)}
+                        color="success"
+                        title="Upload Document"
+                      >
+                        <CloudUpload />
                       </IconButton>
                       <IconButton
                         size="small"
@@ -493,6 +626,108 @@ export const CompaniesPage = () => {
             }}
           >
             {editingCompany ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={documentDialogOpen}
+        onClose={handleCloseDocumentDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Upload Document for {selectedCompanyForDocument?.name ?? 'Company'}
+        </DialogTitle>
+        <DialogContent dividers>
+          {documentDialogLoading ? (
+            <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Box component="form" sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                label="Document Name"
+                value={documentForm.documentName}
+                onChange={(e) => setDocumentForm((prev) => ({ ...prev, documentName: e.target.value }))}
+                fullWidth
+                required
+              />
+              <TextField
+                select
+                label="Document Type"
+                value={documentForm.documentType}
+                onChange={(e) => {
+                  const nextType = e.target.value;
+                  setDocumentForm((prev) => ({
+                    ...prev,
+                    documentType: nextType,
+                    documentSubType: nextType === 'Company Confirmation Statement' ? prev.documentSubType : '',
+                  }));
+                }}
+                fullWidth
+                required
+              >
+                {COMPANY_DOCUMENT_TYPES.map((type) => (
+                  <MenuItem key={type} value={type}>
+                    {type}
+                  </MenuItem>
+                ))}
+              </TextField>
+              {documentForm.documentType === 'Company Confirmation Statement' && (
+                <TextField
+                  select
+                  label="Statement Year"
+                  value={documentForm.documentSubType}
+                  onChange={(e) => setDocumentForm((prev) => ({ ...prev, documentSubType: e.target.value }))}
+                  fullWidth
+                  required
+                >
+                  <MenuItem value="">Select a year</MenuItem>
+                  {CONFIRMATION_STATEMENT_YEARS.map((year) => (
+                    <MenuItem key={year} value={year}>
+                      {year}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+              <Button variant="outlined" component="label" fullWidth>
+                {documentForm.files.length > 0 ? `${documentForm.files.length} file(s) selected` : 'Select document files'}
+                <input
+                  type="file"
+                  hidden
+                  multiple
+                  onChange={(e) =>
+                    setDocumentForm((prev) => ({
+                      ...prev,
+                      files: Array.from(e.target.files || []),
+                    }))
+                  }
+                />
+              </Button>
+              <Typography variant="caption" color="text.secondary">
+                Upload PDF, DOCX, or image files (max 25MB each).
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 2 }}>
+          <Button onClick={handleCloseDocumentDialog} disabled={documentUploading}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSaveDocument}
+            variant="contained"
+            disabled={documentUploading}
+            sx={{
+              minWidth: 140,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+              },
+            }}
+          >
+            {documentUploading ? 'Uploading...' : 'Upload Documents'}
           </Button>
         </DialogActions>
       </Dialog>

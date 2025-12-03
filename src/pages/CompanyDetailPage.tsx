@@ -430,12 +430,12 @@ export const CompanyDetailPage = () => {
               </Box>
             </Box>
 
-            {/* View Properties Button */}
-            <Box sx={{ mt: 3 }}>
+            {/* Action Buttons */}
+            <Box sx={{ mt: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
               <Button
                 variant="contained"
                 size="large"
-                onClick={() => navigate(`/companies/${company.id}/properties`)}
+                onClick={() => navigate(`/companies/${company.id}/documents`)}
                 sx={{
                   bgcolor: 'rgba(255, 255, 255, 0.2)',
                   color: 'white',
@@ -445,6 +445,29 @@ export const CompanyDetailPage = () => {
                     bgcolor: 'rgba(255, 255, 255, 0.3)',
                     transform: 'translateY(-2px)',
                     boxShadow: '0 10px 20px rgba(0, 0, 0, 0.2)',
+                  },
+                  px: 4,
+                  py: 1.5,
+                  fontSize: '1.1rem',
+                  fontWeight: 600,
+                  borderRadius: 3,
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                View Documents
+              </Button>
+              <Button
+                variant="outlined"
+                size="large"
+                onClick={() => navigate(`/companies/${company.id}/properties`)}
+                sx={{
+                  color: 'white',
+                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                  backdropFilter: 'blur(10px)',
+                  '&:hover': {
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                    transform: 'translateY(-2px)',
                   },
                   px: 4,
                   py: 1.5,

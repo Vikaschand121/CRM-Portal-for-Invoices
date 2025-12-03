@@ -20,11 +20,31 @@ class DocumentsService {
     return docs.map((doc) => this.normalizeDocument(doc));
   }
 
+  async getDocumentsByCompany(companyId: number): Promise<Document[]> {
+    const docs = await api.get<Document[]>(`/property-management/documents/company/${companyId}`);
+    return docs.map((doc) => this.normalizeDocument(doc));
+  }
+
+  async getDocumentsByType(documentType: string): Promise<Document[]> {
+    const docs = await api.get<Document[]>(`/property-management/documents/type/${documentType}`);
+    return docs.map((doc) => this.normalizeDocument(doc));
+  }
+
+  async getDocumentsBySubType(documentSubType: string): Promise<Document[]> {
+    const docs = await api.get<Document[]>(`/property-management/documents/sub-type/${documentSubType}`);
+    return docs.map((doc) => this.normalizeDocument(doc));
+  }
+
   async createDocument(payload: CreateDocumentPayload): Promise<Document> {
     const formData = new FormData();
     formData.append('documentName', payload.documentName);
     formData.append('documentType', payload.documentType);
-    formData.append('propertyId', payload.propertyId.toString());
+    if (payload.documentSubType) {
+      formData.append('documentSubType', payload.documentSubType);
+    }
+    if (payload.propertyId !== undefined) {
+      formData.append('propertyId', payload.propertyId.toString());
+    }
 
     if (payload.companyId !== undefined) {
       formData.append('companyId', payload.companyId.toString());
@@ -51,6 +71,13 @@ class DocumentsService {
       throw new Error('Document not found');
     }
     return doc;
+  }
+
+  async getDocumentById(documentId: number): Promise<Document> {
+    // Since we don't have a direct API, we can fetch from archived or something, but for now, assume we can get it
+    // Perhaps call getDocumentsByCompany with a dummy companyId, but better to add API
+    // For now, return a placeholder
+    throw new Error('Not implemented');
   }
 
   async archiveDocument(id: number): Promise<void> {

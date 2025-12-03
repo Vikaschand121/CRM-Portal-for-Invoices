@@ -214,6 +214,7 @@ export interface Document {
   id: number;
   documentName: string;
   documentType: string;
+  documentSubType?: string;
   filePath: string;
   fileUrl: string;
   companyId?: number;
@@ -229,6 +230,7 @@ export interface Document {
 export interface CreateDocumentPayload {
   documentName: string;
   documentType: string;
+  documentSubType?: string;
   companyId?: number;
   tenantId?: number;
   propertyId: number;

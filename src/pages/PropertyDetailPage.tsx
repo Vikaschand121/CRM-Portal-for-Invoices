@@ -53,7 +53,15 @@ import {
   TrendingUp,
   Visibility,
 } from '@mui/icons-material';
-import { Property, Tenant, Document, Invoice, CreateTenantPayload, CreateDocumentPayload, RentPaymentFrequency } from '../types';
+import {
+  Property,
+  Tenant,
+  Document,
+  Invoice,
+  CreateTenantPayload,
+  CreateDocumentPayload,
+  RentPaymentFrequency,
+} from '../types';
 import { propertiesService } from '../services/properties.service';
 import { tenantsService } from '../services/tenants.service';
 import { documentsService } from '../services/documents.service';
@@ -62,6 +70,17 @@ import { useSnackbar } from '../hooks/useSnackbar';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import { getQuarterRange } from '../utils/quarter';
 
+const COMPANY_DOCUMENT_TYPES = [
+  'Company Incorporation Certificate',
+  'Company Confirmation Statement',
+  'Company Vat Certificate',
+];
+
+const CONFIRMATION_STATEMENT_START_YEAR = 2021;
+const CONFIRMATION_STATEMENT_YEARS = Array.from(
+  { length: new Date().getFullYear() - CONFIRMATION_STATEMENT_START_YEAR + 1 },
+  (_, index) => (CONFIRMATION_STATEMENT_START_YEAR + index).toString()
+);
 
 const GBP_FORMATTER = new Intl.NumberFormat('en-GB', {
   style: 'currency',
@@ -149,7 +168,8 @@ export const PropertyDetailPage = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [documentForm, setDocumentForm] = useState<CreateDocumentPayload>({
     documentName: '',
-    documentType: '',
+    documentType: COMPANY_DOCUMENT_TYPES[0],
+    documentSubType: '',
     file: null,
     propertyId: parseInt(propertyId || '0'),
     companyId: parseInt(companyId || '0'),
@@ -352,7 +372,8 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
   const handleAddDocument = () => {
     setDocumentForm({
       documentName: '',
-      documentType: '',
+      documentType: COMPANY_DOCUMENT_TYPES[0],
+      documentSubType: '',
       file: null,
       propertyId: parseInt(propertyId || '0'),
       companyId: parseInt(companyId || '0'),
@@ -393,6 +414,13 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
     }
     if (!documentForm.documentType.trim()) {
       showSnackbar('Document type is required', 'error');
+      return;
+    }
+    if (
+      documentForm.documentType === 'Company Confirmation Statement' &&
+      !documentForm.documentSubType
+    ) {
+      showSnackbar('Please select a year for the confirmation statement', 'error');
       return;
     }
     if (!documentForm.file) {
@@ -1281,12 +1309,44 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
               required
             />
             <TextField
+              select
               label="Document Type"
               value={documentForm.documentType}
-              onChange={(e) => setDocumentForm({ ...documentForm, documentType: e.target.value })}
+              onChange={(e) =>
+                setDocumentForm((prev) => ({
+                  ...prev,
+                  documentType: e.target.value,
+                  documentSubType: e.target.value === 'Company Confirmation Statement' ? prev.documentSubType : '',
+                }))
+              }
               fullWidth
               required
-            />
+            >
+              {COMPANY_DOCUMENT_TYPES.map((type) => (
+                <MenuItem key={type} value={type}>
+                  {type}
+                </MenuItem>
+              ))}
+            </TextField>
+            {documentForm.documentType === 'Company Confirmation Statement' && (
+              <TextField
+                select
+                label="Statement Year"
+                value={documentForm.documentSubType}
+                onChange={(e) =>
+                  setDocumentForm((prev) => ({ ...prev, documentSubType: e.target.value }))
+                }
+                fullWidth
+                required
+              >
+                <MenuItem value="">Select a year</MenuItem>
+                {CONFIRMATION_STATEMENT_YEARS.map((year) => (
+                  <MenuItem key={year} value={year}>
+                    {year}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
             <TextField
               label="Tenant"
               select
