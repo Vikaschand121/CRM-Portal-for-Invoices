@@ -69,6 +69,7 @@ import { invoicesService } from '../services/invoices.service';
 import { useSnackbar } from '../hooks/useSnackbar';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import { getQuarterRange } from '../utils/quarter';
+import DescriptionIcon from '@mui/icons-material/Description';
 
 const COMPANY_DOCUMENT_TYPES = [
   'Company Incorporation Certificate',
@@ -610,8 +611,27 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
                 display: 'flex',
                 gap: 1,
                 width: { xs: '100%', md: 'auto' },
-                justifyContent: { xs: 'center', md: 'flex-end' }
+                justifyContent: { xs: 'center', md: 'flex-end' },
+                flexDirection: { xs: 'column', sm: 'row' }
               }}>
+                <Button
+                  startIcon={<DescriptionIcon />}
+                  onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}/documents`)}
+                  sx={{
+                    mb: { xs: 0, md: 2 },
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    '&:hover': {
+                      bgcolor: 'rgba(255, 255, 255, 0.3)',
+                    },
+                    width: { xs: '100%', sm: 'auto' },
+                    minWidth: { xs: '200px', sm: 'auto' },
+                  }}
+                >
+                  View Documents
+                </Button>
                 <Button
                   startIcon={<ArrowBack />}
                   onClick={() => navigate(`/companies/${companyId}/properties`)}

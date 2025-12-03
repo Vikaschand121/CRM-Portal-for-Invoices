@@ -28,6 +28,9 @@ import {
   TextField,
   Typography,
   IconButton,
+  ToggleButton,
+  ToggleButtonGroup,
+  MenuItem,
 } from '@mui/material';
 import {
   AccountBalance,
@@ -44,10 +47,15 @@ import {
   // People,
   TrendingUp,
   Archive,
+  ViewList,
+  ViewModule,
+  CloudUpload,
+  Visibility,
 } from '@mui/icons-material';
 import { Company, Property, CreatePropertyPayload, UpdatePropertyPayload } from '../types';
 import { companiesService } from '../services/companies.service';
 import { propertiesService } from '../services/properties.service';
+import { documentsService } from '../services/documents.service';
 import { useSnackbar } from '../hooks/useSnackbar';
 
 const GBP_FORMATTER = new Intl.NumberFormat('en-GB', {
@@ -77,6 +85,22 @@ const formatCurrency = (value?: number | string | null): string => {
 
   return trimmed;
 };
+
+const PROPERTY_DOCUMENT_TYPES = [
+  'Insurance',
+  'Financial Agreements',
+  'Title Deeds',
+  'Title Plans',
+  'Property Rates',
+  'Purchase',
+  'Valuation',
+];
+
+const PURCHASE_SUB_TYPES = [
+  'Agents',
+  'Solicitors',
+  'Completion Statement',
+];
 
 const getStatusColor = (status?: string) => {
   if (!status) {
@@ -129,6 +153,10 @@ export const CompanyPropertiesPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
+  const [selectedPropertyForDocument, setSelectedPropertyForDocument] = useState<Property | null>(null);
+  const [documentUploading, setDocumentUploading] = useState(false);
   const [formData, setFormData] = useState<CreatePropertyPayload>({
     propertyName: '',
     propertyAddress: '',
@@ -137,6 +165,15 @@ export const CompanyPropertiesPage = () => {
     propertyValue: 0,
     rentalIncomePerAnnum: 0,
     companyId: parseInt(id || '0'),
+  });
+
+  const [documentForm, setDocumentForm] = useState({
+    documentName: '',
+    documentType: PROPERTY_DOCUMENT_TYPES[0],
+    documentSubType: '',
+    propertyId: 0,
+    companyId: parseInt(id || '0'),
+    files: [] as File[],
   });
 
   const loadCompany = async () => {
@@ -235,6 +272,73 @@ export const CompanyPropertiesPage = () => {
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
+  };
+
+  const handleOpenDocumentDialog = (property: Property) => {
+    setSelectedPropertyForDocument(property);
+    setDocumentForm({
+      documentName: '',
+      documentType: PROPERTY_DOCUMENT_TYPES[0],
+      documentSubType: '',
+      propertyId: property.id,
+      companyId: parseInt(id || '0'),
+      files: [],
+    });
+    setDocumentDialogOpen(true);
+  };
+
+  const handleCloseDocumentDialog = () => {
+    setDocumentDialogOpen(false);
+    setSelectedPropertyForDocument(null);
+    setDocumentForm({
+      documentName: '',
+      documentType: PROPERTY_DOCUMENT_TYPES[0],
+      documentSubType: '',
+      propertyId: 0,
+      companyId: parseInt(id || '0'),
+      files: [],
+    });
+  };
+
+  const handleSaveDocument = async () => {
+    if (!selectedPropertyForDocument) return;
+
+    if (!documentForm.documentName.trim()) {
+      showSnackbar('Document name is required', 'error');
+      return;
+    }
+    if (!documentForm.documentType.trim()) {
+      showSnackbar('Document type is required', 'error');
+      return;
+    }
+    if (documentForm.documentType === 'Purchase' && !documentForm.documentSubType) {
+      showSnackbar('Please select a sub-type for Purchase', 'error');
+      return;
+    }
+    if (documentForm.files.length === 0) {
+      showSnackbar('Please select files to upload', 'error');
+      return;
+    }
+
+    setDocumentUploading(true);
+    try {
+      for (const file of documentForm.files) {
+        await documentsService.createDocument({
+          documentName: documentForm.documentName.trim(),
+          documentType: documentForm.documentType,
+          documentSubType: documentForm.documentSubType,
+          companyId: selectedPropertyForDocument.company.id,
+          propertyId: selectedPropertyForDocument.id,
+          file: file,
+        });
+      }
+      showSnackbar(`${documentForm.files.length} document(s) uploaded successfully`, 'success');
+      handleCloseDocumentDialog();
+    } catch (error) {
+      showSnackbar('Failed to upload documents', 'error');
+    } finally {
+      setDocumentUploading(false);
+    }
   };
 
   const propertyStats = useMemo(() => {
@@ -557,10 +661,63 @@ export const CompanyPropertiesPage = () => {
         </Box>
 
 
+        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">Properties ({properties.length})</Typography>
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={(_, newMode) => newMode && setViewMode(newMode)}
+            size="small"
+          >
+            <ToggleButton value="card">
+              <ViewModule />
+            </ToggleButton>
+            <ToggleButton value="table">
+              <ViewList />
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
         {properties.length === 0 ? (
           <Alert severity="info">
             No properties have been linked to this company yet.
           </Alert>
+        ) : viewMode === 'table' ? (
+          <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
+            <Table>
+              <TableHead sx={{ bgcolor: 'primary.main' }}>
+                <TableRow>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Property Name</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Type</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Value</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {properties.map((property) => (
+                  <TableRow key={property.id}>
+                    <TableCell>{property.propertyName}</TableCell>
+                    <TableCell>{property.propertyType}</TableCell>
+                    <TableCell>{formatCurrency(property.propertyValue)}</TableCell>
+                    <TableCell>
+                      <IconButton onClick={() => navigate(`/companies/${id}/properties/${property.id}`)}>
+                        <Visibility />
+                      </IconButton>
+                      <IconButton onClick={() => handleOpenDocumentDialog(property)}>
+                        <CloudUpload />
+                      </IconButton>
+                      <IconButton onClick={() => handleEdit(property)}>
+                        <Edit />
+                      </IconButton>
+                      <IconButton onClick={() => handleArchive(property.id)}>
+                        <Archive />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         ) : (
           <Box
             sx={{
@@ -620,6 +777,9 @@ export const CompanyPropertiesPage = () => {
                   >
                     View
                   </Button>
+                  <IconButton size="small" onClick={() => handleOpenDocumentDialog(property)}>
+                    <CloudUpload />
+                  </IconButton>
                   <IconButton size="small" onClick={() => handleEdit(property)}>
                     <Edit />
                   </IconButton>
@@ -685,6 +845,97 @@ export const CompanyPropertiesPage = () => {
           <Button onClick={handleCloseDialog}>Cancel</Button>
           <Button onClick={handleSave} variant="contained">
             {editingProperty ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Document Upload Dialog */}
+      <Dialog open={documentDialogOpen} onClose={handleCloseDocumentDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Upload Document for {selectedPropertyForDocument?.propertyName ?? 'Property'}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box component="form" sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              label="Document Name"
+              value={documentForm.documentName}
+              onChange={(e) => setDocumentForm((prev) => ({ ...prev, documentName: e.target.value }))}
+              fullWidth
+              required
+            />
+            <TextField
+              select
+              label="Document Type"
+              value={documentForm.documentType}
+              onChange={(e) => {
+                const nextType = e.target.value;
+                setDocumentForm((prev) => ({
+                  ...prev,
+                  documentType: nextType,
+                  documentSubType: nextType === 'Purchase' ? prev.documentSubType : '',
+                }));
+              }}
+              fullWidth
+              required
+            >
+              {PROPERTY_DOCUMENT_TYPES.map((type) => (
+                <MenuItem key={type} value={type}>
+                  {type}
+                </MenuItem>
+              ))}
+            </TextField>
+            {documentForm.documentType === 'Purchase' && (
+              <TextField
+                select
+                label="Purchase Sub-Type"
+                value={documentForm.documentSubType}
+                onChange={(e) => setDocumentForm((prev) => ({ ...prev, documentSubType: e.target.value }))}
+                fullWidth
+                required
+              >
+                {PURCHASE_SUB_TYPES.map((subType) => (
+                  <MenuItem key={subType} value={subType}>
+                    {subType}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+            <Button variant="outlined" component="label" fullWidth>
+              {documentForm.files.length > 0 ? `${documentForm.files.length} file(s) selected` : 'Select document files'}
+              <input
+                type="file"
+                multiple
+                hidden
+                onChange={(e) =>
+                  setDocumentForm((prev) => ({
+                    ...prev,
+                    files: Array.from(e.target.files || []),
+                  }))
+                }
+              />
+            </Button>
+            <Typography variant="caption" color="text.secondary">
+              Upload PDF, DOCX, or image files (max 25MB each).
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 2 }}>
+          <Button onClick={handleCloseDocumentDialog} disabled={documentUploading}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSaveDocument}
+            variant="contained"
+            disabled={documentUploading}
+            sx={{
+              minWidth: 140,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+              },
+            }}
+          >
+            {documentUploading ? 'Uploading...' : 'Upload Documents'}
           </Button>
         </DialogActions>
       </Dialog>

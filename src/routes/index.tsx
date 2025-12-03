@@ -12,6 +12,9 @@ import { DocumentSubTypePage } from '../pages/DocumentSubTypePage';
 import { CompanyArchivedDocumentsPage } from '../pages/CompanyArchivedDocumentsPage';
 import { ArchivedDocumentTypePage } from '../pages/ArchivedDocumentTypePage';
 import { ArchivedDocumentSubTypePage } from '../pages/ArchivedDocumentSubTypePage';
+import { PropertyDocumentsPage } from '../pages/PropertyDocumentsPage';
+import { PropertyDocumentTypePage } from '../pages/PropertyDocumentTypePage';
+import { PropertyDocumentSubTypePage } from '../pages/PropertyDocumentSubTypePage';
 import { ArchivedPropertiesPage } from '../pages/ArchivedPropertiesPage';
 import { ArchivedTenantsPage } from '../pages/ArchivedTenantsPage';
 import { ArchivedInvoicesPage } from '../pages/ArchivedInvoicesPage';
@@ -85,6 +88,9 @@ export const AppRoutes = () => {
         <Route path="companies/:companyId/documents" element={<CompanyDocumentsPage />} />
         <Route path="companies/:companyId/documents/type/:documentType" element={<DocumentTypePage />} />
         <Route path="companies/:companyId/documents/subtype/:documentSubType" element={<DocumentSubTypePage />} />
+        <Route path="companies/:companyId/properties/:propertyId/documents" element={<PropertyDocumentsPage />} />
+        <Route path="companies/:companyId/properties/:propertyId/documents/type/:documentType" element={<PropertyDocumentTypePage />} />
+        <Route path="companies/:companyId/properties/:propertyId/documents/subtype/:documentSubType" element={<PropertyDocumentSubTypePage />} />
         <Route path="companies/:companyId/documents/archived" element={<CompanyArchivedDocumentsPage />} />
         <Route path="companies/:companyId/documents/archived/type/:documentType" element={<ArchivedDocumentTypePage />} />
         <Route path="companies/:companyId/documents/archived/subtype/:documentSubType" element={<ArchivedDocumentSubTypePage />} />
