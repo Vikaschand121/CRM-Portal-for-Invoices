@@ -15,6 +15,10 @@ import { ArchivedDocumentSubTypePage } from '../pages/ArchivedDocumentSubTypePag
 import { PropertyDocumentsPage } from '../pages/PropertyDocumentsPage';
 import { PropertyDocumentTypePage } from '../pages/PropertyDocumentTypePage';
 import { PropertyDocumentSubTypePage } from '../pages/PropertyDocumentSubTypePage';
+import { TenantDetailPage } from '../pages/TenantDetailPage';
+import { TenantDocumentsPage } from '../pages/TenantDocumentsPage';
+import { TenantDocumentTypePage } from '../pages/TenantDocumentTypePage';
+import { TenantDocumentSubTypePage } from '../pages/TenantDocumentSubTypePage';
 import { ArchivedPropertiesPage } from '../pages/ArchivedPropertiesPage';
 import { ArchivedTenantsPage } from '../pages/ArchivedTenantsPage';
 import { ArchivedInvoicesPage } from '../pages/ArchivedInvoicesPage';
@@ -105,6 +109,10 @@ export const AppRoutes = () => {
         <Route path="companies/:companyId/properties/:propertyId/invoices/:invoiceId/edit" element={<InvoiceEditPage />} />
         <Route path="companies/:companyId/properties/:propertyId/invoices/:invoiceId/delete" element={<InvoiceDeletePage />} />
         <Route path="companies/:companyId/properties/:propertyId/documents/:documentId" element={<DocumentViewerPage />} />
+        <Route path="tenants/:tenantId" element={<TenantDetailPage />} />
+        <Route path="tenants/:tenantId/documents" element={<TenantDocumentsPage />} />
+        <Route path="tenants/:tenantId/documents/type/:documentType" element={<TenantDocumentTypePage />} />
+        <Route path="tenants/:tenantId/documents/subtype/:documentSubType" element={<TenantDocumentSubTypePage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="legal" element={<LegalPage />} />
         <Route path="financial" element={<FinancialPage />} />

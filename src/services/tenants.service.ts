@@ -6,6 +6,10 @@ class TenantsService {
     return api.get<Tenant[]>(`/property-management/tenants/property/${propertyId}`);
   }
 
+  async getTenant(id: number): Promise<Tenant> {
+    return api.get<Tenant>(`/property-management/tenants/${id}`);
+  }
+
   async createTenant(payload: CreateTenantPayload): Promise<Tenant> {
     return api.post<Tenant>('/property-management/tenants', payload);
   }

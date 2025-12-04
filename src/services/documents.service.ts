@@ -40,6 +40,11 @@ class DocumentsService {
     return docs.map((doc) => this.normalizeDocument(doc));
   }
 
+  async getDocumentsByTenant(tenantId: number): Promise<Document[]> {
+    const docs = await api.get<Document[]>(`/property-management/documents/tenant/${tenantId}`);
+    return docs.map((doc) => this.normalizeDocument(doc));
+  }
+
   async createDocument(payload: CreateDocumentPayload): Promise<Document> {
     const formData = new FormData();
     formData.append('documentName', payload.documentName);

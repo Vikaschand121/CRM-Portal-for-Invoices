@@ -52,6 +52,7 @@ import {
   People,
   TrendingUp,
   Visibility,
+  RemoveRedEye,
 } from '@mui/icons-material';
 import {
   Property,
@@ -75,6 +76,22 @@ const COMPANY_DOCUMENT_TYPES = [
   'Company Incorporation Certificate',
   'Company Confirmation Statement',
   'Company Vat Certificate',
+];
+
+const TENANT_DOCUMENT_TYPES = [
+  'Lease',
+  'Rent deposit',
+  'Lease termination',
+  'Rent review',
+  'Compliance documentation',
+  'Invoices',
+];
+
+const TENANT_INVOICE_SUBTYPES = [
+  'Rent',
+  'Rent deposit',
+  'Insurance',
+  'Service charge',
 ];
 
 const CONFIRMATION_STATEMENT_START_YEAR = 2021;
@@ -212,10 +229,10 @@ export const PropertyDetailPage = () => {
   }, [propertyId]);
 
   useEffect(() => {
-    if (location.state?.tab === 'documents') {
-      setTabValue(2); // Documents tab
+    if (location.state?.tab === 'tenants') {
+      setTabValue(1); // Tenants tab
     } else if (location.state?.tab === 'invoices') {
-      setTabValue(3); // Invoices tab
+      setTabValue(2); // Invoices tab
     }
   }, [location.state]);
 
@@ -382,6 +399,19 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
     setDocumentDialogOpen(true);
   };
 
+  const handleUploadTenantDocument = (tenant: Tenant) => {
+    setDocumentForm({
+      documentName: '',
+      documentType: TENANT_DOCUMENT_TYPES[0],
+      documentSubType: '',
+      file: null,
+      propertyId: parseInt(propertyId || '0'),
+      companyId: parseInt(companyId || '0'),
+      tenantId: tenant.id,
+    });
+    setDocumentDialogOpen(true);
+  };
+
   const handleDeleteDocument = async () => {
     if (!deleteDocumentId) return;
     try {
@@ -422,6 +452,14 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
       !documentForm.documentSubType
     ) {
       showSnackbar('Please select a year for the confirmation statement', 'error');
+      return;
+    }
+    if (
+      documentForm.documentType === 'Invoices' &&
+      documentForm.tenantId &&
+      !documentForm.documentSubType
+    ) {
+      showSnackbar('Please select an invoice type', 'error');
       return;
     }
     if (!documentForm.file) {
@@ -466,6 +504,10 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
 
   const handleDeleteInvoice = (invoiceId: number) => {
     navigate(`/companies/${companyId}/properties/${propertyId}/invoices/${invoiceId}/delete`);
+  };
+
+  const handleViewTenant = (tenantId: number) => {
+    navigate(`/tenants/${tenantId}`);
   };
 
   if (loading) {
@@ -717,7 +759,6 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
           <Tabs value={tabValue} onChange={handleTabChange} aria-label="property tabs">
             <Tab label="Overview" />
             <Tab label="Tenants" />
-            <Tab label="Documents" />
             <Tab label="Invoices" />
           </Tabs>
         </Box>
@@ -968,6 +1009,12 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
                     <TableCell>{tenant.breakDate && !isNaN(new Date(tenant.breakDate).getTime()) ? new Date(tenant.breakDate).toLocaleDateString() : tenant.breakDate || 'N/A'}</TableCell>
                     {/* <TableCell>{tenant.isVatAvailable ? 'Yes' : 'No'}</TableCell> */}
                     <TableCell>
+                      <IconButton onClick={() => handleViewTenant(tenant.id)} sx={{ color: 'primary.main' }}>
+                        <RemoveRedEye />
+                      </IconButton>
+                      <IconButton onClick={() => handleUploadTenantDocument(tenant)} sx={{ color: 'secondary.main' }}>
+                        <CloudUpload />
+                      </IconButton>
                       <IconButton onClick={() => handleEditTenant(tenant)}>
                         <Edit />
                       </IconButton>
@@ -984,104 +1031,6 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
       )}
 
       {tabValue === 2 && (
-        <Box sx={{ mt: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">Documents</Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                variant="outlined"
-                startIcon={<History />}
-                onClick={() => navigate('/documents/archived', { state: { fromProperty: propertyId, fromCompany: companyId, tab: 'documents' } })}
-              >
-                View Archived
-              </Button>
-              <Button variant="contained" startIcon={<CloudUpload />} onClick={handleAddDocument}>
-                Upload Document
-              </Button>
-            </Box>
-          </Box>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: 'repeat(1, 1fr)',
-                sm: 'repeat(2, 1fr)',
-                md: 'repeat(3, 1fr)',
-                lg: 'repeat(4, 1fr)'
-              },
-              gap: { xs: 2, sm: 2.5 },
-            }}
-          >
-            {documents.map((doc) => (
-              <Card
-                key={doc.id}
-                sx={{
-                  borderRadius: 4,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.1)',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 32px 64px rgba(15, 23, 42, 0.15)',
-                  },
-                }}
-              >
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <Box
-                      sx={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: 'secondary.main',
-                        color: 'white',
-                      }}
-                    >
-                      <Description fontSize="small" />
-                    </Box>
-                    <Typography variant="h6" fontWeight={700} sx={{ color: 'secondary.main' }}>
-                      {doc.documentName}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                    <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'secondary.50', transition: 'all 0.2s ease', '&:hover': { bgcolor: 'secondary.100' } }}>
-                      <Typography variant="body2" color="secondary.800" fontWeight={600}>
-                        Type
-                      </Typography>
-                      <Typography variant="body1" fontWeight={600}>
-                        {doc.documentType}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'secondary.50', transition: 'all 0.2s ease', '&:hover': { bgcolor: 'secondary.100' } }}>
-                      <Typography variant="body2" color="secondary.800" fontWeight={600}>
-                        Uploaded
-                      </Typography>
-                      <Typography variant="body1" fontWeight={600}>
-                        {new Date(doc.createdAt).toLocaleDateString()}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                    <IconButton onClick={() => handleArchiveDocument(doc.id)} sx={{ color: 'warning.main' }}>
-                      <Archive />
-                    </IconButton>
-                    <IconButton onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}/documents/${doc.id}`)} sx={{ color: 'primary.main' }}>
-                      <Visibility />
-                    </IconButton>
-                  </Box>
-                </CardContent>
-              </Card>
-            ))}
-          </Box>
-        </Box>
-      )}
-
-      {tabValue === 3 && (
         <Box sx={{ mt: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             
@@ -1318,7 +1267,12 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
 
       {/* Document Dialog */}
       <Dialog open={documentDialogOpen} onClose={() => setDocumentDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Upload Document</DialogTitle>
+        <DialogTitle>
+          {documentForm.tenantId
+            ? `Upload documents for ${tenants.find(t => t.id === documentForm.tenantId)?.tenantName || 'Tenant'}`
+            : 'Upload Document'
+          }
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
@@ -1342,7 +1296,7 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
               fullWidth
               required
             >
-              {COMPANY_DOCUMENT_TYPES.map((type) => (
+              {(documentForm.tenantId ? TENANT_DOCUMENT_TYPES : COMPANY_DOCUMENT_TYPES).map((type) => (
                 <MenuItem key={type} value={type}>
                   {type}
                 </MenuItem>
@@ -1367,38 +1321,61 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
                 ))}
               </TextField>
             )}
-            <TextField
-              label="Tenant"
-              select
-              value={documentForm.tenantId ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                setDocumentForm({ ...documentForm, tenantId: value === '' ? undefined : parseInt(value, 10) });
-              }}
-              fullWidth
-            >
-              {tenants.map((tenant) => (
-                <MenuItem key={tenant.id} value={tenant.id}>
-                  {tenant.tenantName}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              label="Invoice"
-              select
-              value={documentForm.invoiceId ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                setDocumentForm({ ...documentForm, invoiceId: value === '' ? undefined : parseInt(value, 10) });
-              }}
-              fullWidth
-            >
-              {invoices.map((invoice) => (
-                <MenuItem key={invoice.id} value={invoice.id}>
-                  {invoice.invoiceNumber}
-                </MenuItem>
-              ))}
-            </TextField>
+            {documentForm.documentType === 'Invoices' && documentForm.tenantId && (
+              <TextField
+                select
+                label="Invoice Type"
+                value={documentForm.documentSubType}
+                onChange={(e) =>
+                  setDocumentForm((prev) => ({ ...prev, documentSubType: e.target.value }))
+                }
+                fullWidth
+                required
+              >
+                <MenuItem value="">Select invoice type</MenuItem>
+                {TENANT_INVOICE_SUBTYPES.map((subType) => (
+                  <MenuItem key={subType} value={subType}>
+                    {subType}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+            {!documentForm.tenantId && (
+              <>
+                <TextField
+                  label="Tenant"
+                  select
+                  value={documentForm.tenantId ?? ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setDocumentForm({ ...documentForm, tenantId: value === '' ? undefined : parseInt(value, 10) });
+                  }}
+                  fullWidth
+                >
+                  {tenants.map((tenant) => (
+                    <MenuItem key={tenant.id} value={tenant.id}>
+                      {tenant.tenantName}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  label="Invoice"
+                  select
+                  value={documentForm.invoiceId ?? ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setDocumentForm({ ...documentForm, invoiceId: value === '' ? undefined : parseInt(value, 10) });
+                  }}
+                  fullWidth
+                >
+                  {invoices.map((invoice) => (
+                    <MenuItem key={invoice.id} value={invoice.id}>
+                      {invoice.invoiceNumber}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </>
+            )}
             <input
               type="file"
               onChange={(e) => setDocumentForm({ ...documentForm, file: e.target.files?.[0] || null })}
