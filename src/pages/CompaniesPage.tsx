@@ -70,6 +70,26 @@ const COMPANY_DOCUMENT_TYPES = [
   'Company Vat Certificate',
 ];
 
+const DATE_PLACEHOLDER = 'dd/mm/yyyy';
+
+const buildDocumentName = (
+  company: Company | null,
+  type: string,
+  subType?: string,
+  includeDatePlaceholder = true,
+): string => {
+  const base = company?.name?.trim() || 'Company Document';
+  const segments = [type.trim()];
+  if (subType?.trim()) {
+    segments.push(subType.trim());
+  }
+  let name = `${base} ${segments.join(' - ')}`.trim();
+  if (includeDatePlaceholder) {
+    name = `${name} - ${DATE_PLACEHOLDER}`;
+  }
+  return name;
+};
+
 const CONFIRMATION_STATEMENT_START_YEAR = 2021;
 const CONFIRMATION_STATEMENT_YEARS = Array.from(
   { length: new Date().getFullYear() - CONFIRMATION_STATEMENT_START_YEAR + 1 },
@@ -103,6 +123,7 @@ export const CompaniesPage = () => {
     companyId: undefined,
     files: [],
   });
+  const [lastAutoDocumentName, setLastAutoDocumentName] = useState('');
 
   const formik = useFormik({
     initialValues: {
@@ -207,13 +228,15 @@ export const CompaniesPage = () => {
       const properties = companyDetails.properties ?? [];
       setCompanyProperties(properties);
       setSelectedCompanyForDocument(companyDetails);
+      const defaultDocumentName = buildDocumentName(companyDetails, COMPANY_DOCUMENT_TYPES[0]);
       setDocumentForm({
-        documentName: '',
+        documentName: defaultDocumentName,
         documentType: COMPANY_DOCUMENT_TYPES[0],
         documentSubType: '',
         companyId: companyDetails.id,
         files: [],
       });
+      setLastAutoDocumentName(defaultDocumentName);
     } catch (error) {
       showError('Failed to load company details');
       setDocumentDialogOpen(false);
@@ -227,6 +250,37 @@ export const CompaniesPage = () => {
     setSelectedCompanyForDocument(null);
     setCompanyProperties([]);
     resetDocumentForm();
+    setLastAutoDocumentName('');
+  };
+
+  const handleDocumentTypeChange = (nextType: string) => {
+    let nextAutoName = '';
+    setDocumentForm((prev) => {
+      const nextSubType = nextType === 'Company Confirmation Statement' ? prev.documentSubType : '';
+      nextAutoName = buildDocumentName(selectedCompanyForDocument, nextType, nextSubType);
+      const shouldUpdateName = !prev.documentName || prev.documentName === lastAutoDocumentName;
+      return {
+        ...prev,
+        documentType: nextType,
+        documentSubType: nextSubType,
+        documentName: shouldUpdateName ? nextAutoName : prev.documentName,
+      };
+    });
+    setLastAutoDocumentName(nextAutoName);
+  };
+
+  const handleStatementYearChange = (nextSubType: string) => {
+    let nextAutoName = '';
+    setDocumentForm((prev) => {
+      nextAutoName = buildDocumentName(selectedCompanyForDocument, prev.documentType, nextSubType, true);
+      const shouldUpdateName = !prev.documentName || prev.documentName === lastAutoDocumentName;
+      return {
+        ...prev,
+        documentSubType: nextSubType,
+        documentName: shouldUpdateName ? nextAutoName : prev.documentName,
+      };
+    });
+    setLastAutoDocumentName(nextAutoName);
   };
 
   const handleSaveDocument = async () => {
@@ -647,24 +701,10 @@ export const CompaniesPage = () => {
           ) : (
             <Box component="form" sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <TextField
-                label="Document Name"
-                value={documentForm.documentName}
-                onChange={(e) => setDocumentForm((prev) => ({ ...prev, documentName: e.target.value }))}
-                fullWidth
-                required
-              />
-              <TextField
                 select
                 label="Document Type"
                 value={documentForm.documentType}
-                onChange={(e) => {
-                  const nextType = e.target.value;
-                  setDocumentForm((prev) => ({
-                    ...prev,
-                    documentType: nextType,
-                    documentSubType: nextType === 'Company Confirmation Statement' ? prev.documentSubType : '',
-                  }));
-                }}
+                onChange={(e) => handleDocumentTypeChange(e.target.value)}
                 fullWidth
                 required
               >
@@ -679,7 +719,7 @@ export const CompaniesPage = () => {
                   select
                   label="Statement Year"
                   value={documentForm.documentSubType}
-                  onChange={(e) => setDocumentForm((prev) => ({ ...prev, documentSubType: e.target.value }))}
+                  onChange={(e) => handleStatementYearChange(e.target.value)}
                   fullWidth
                   required
                 >
@@ -691,6 +731,14 @@ export const CompaniesPage = () => {
                   ))}
                 </TextField>
               )}
+              <TextField
+                label="Document Name"
+                value={documentForm.documentName}
+                onChange={(e) => setDocumentForm((prev) => ({ ...prev, documentName: e.target.value }))}
+                fullWidth
+                helperText="Replace dd/mm/yyyy with the actual document date."
+                required
+              />
               <Button variant="outlined" component="label" fullWidth>
                 {documentForm.files.length > 0 ? `${documentForm.files.length} file(s) selected` : 'Select document files'}
                 <input
