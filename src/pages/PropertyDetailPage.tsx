@@ -83,7 +83,7 @@ const TENANT_DOCUMENT_TYPES = [
   'Rent deposit',
   'Lease termination',
   'Rent review',
-  'Compliance documentation',
+  'Financial Agreement',
   'Invoices',
 ];
 
