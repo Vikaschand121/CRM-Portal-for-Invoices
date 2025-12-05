@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
   Box,
@@ -170,6 +170,7 @@ interface InvoiceWorkspacePageProps {
 
 export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
   const { companyId, propertyId, invoiceId } = useParams<{ companyId: string; propertyId: string; invoiceId?: string }>();
+  const location = useLocation();
   const numericCompanyId = Number(companyId);
   const numericPropertyId = Number(propertyId);
   const numericInvoiceId = invoiceId ? Number(invoiceId) : undefined;
@@ -258,12 +259,13 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             }, 500);
           }
         } else {
+          const tenantIdFromState = location.state?.tenantId;
           const initialForm = buildInitialForm(
             numericPropertyId,
             foundProperty.company?.id ?? numericCompanyId,
-            null
+            tenantIdFromState
           );
-          const formWithTenant = { ...initialForm, tenantId: null, billToName: '', billToAddress: '', invoiceNumber: `TEMP-${numericPropertyId}-${Date.now().toString().slice(-4)}` };
+          const formWithTenant = { ...initialForm, tenantId: tenantIdFromState ? tenantIdFromState.toString() : null, billToName: '', billToAddress: '', invoiceNumber: `TEMP-${numericPropertyId}-${Date.now().toString().slice(-4)}` };
           setForm(formWithTenant);
         }
       } catch (err: any) {

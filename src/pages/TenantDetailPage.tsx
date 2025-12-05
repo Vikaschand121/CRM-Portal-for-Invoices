@@ -21,6 +21,7 @@ import {
   Chip,
 } from '@mui/material';
 import {
+  Add,
   ArrowBack,
   Business,
   Description,
@@ -75,6 +76,7 @@ export const TenantDetailPage = () => {
   const navigate = useNavigate();
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
+  // const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,6 +95,8 @@ export const TenantDetailPage = () => {
         setTenant(tenantData);
         const documentData = await documentsService.getDocumentsByTenant(parseInt(tenantId));
         setDocuments(documentData);
+        // const invoiceData = await invoicesService.getInvoicesByTenant(parseInt(tenantId));
+        // setInvoices(invoiceData);
       } catch (err) {
         setError('Failed to load tenant data');
       } finally {
@@ -113,6 +117,34 @@ export const TenantDetailPage = () => {
       }
     }
   };
+
+  const handleAddInvoice = () => {
+    if (!tenant) return;
+    navigate(`/companies/${tenant.property?.company?.id}/properties/${tenant.property?.id || tenant.propertyId}/invoices/new`, {
+      state: { tenantId: tenant.id }
+    });
+  };
+
+  // const handleViewInvoice = (invoiceId: number) => {
+  //   if (!tenant) return;
+  //   navigate(`/companies/${tenant.property?.company?.id}/properties/${tenant.propertyId}/invoices/${invoiceId}`);
+  // };
+
+  // const handleEditInvoice = (invoiceId: number) => {
+  //   if (!tenant) return;
+  //   navigate(`/companies/${tenant.property?.company?.id}/properties/${tenant.propertyId}/invoices/${invoiceId}/edit`);
+  // };
+
+  // const handleArchiveInvoice = async (invoiceId: number) => {
+  //   if (window.confirm('Are you sure you want to archive this invoice?')) {
+  //     try {
+  //       await invoicesService.archiveInvoice(invoiceId);
+  //       setInvoices(prev => prev.filter(inv => inv.id !== invoiceId));
+  //     } catch (err) {
+  //       setError('Failed to archive invoice');
+  //     }
+  //   }
+  // };
 
   if (loading) {
     return (
@@ -160,6 +192,12 @@ export const TenantDetailPage = () => {
       helper: 'Total Documents',
       icon: Description,
     },
+    // {
+    //   label: 'Invoices',
+    //   value: invoices.length.toString(),
+    //   helper: 'Total Invoices',
+    //   icon: ReceiptLongIcon,
+    // },
   ];
 
   return (
@@ -499,6 +537,48 @@ export const TenantDetailPage = () => {
               </TableBody>
             </Table>
           </TableContainer>
+        </Box>
+
+        {/* Invoices Section */}
+        <Box sx={{ mt: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">Invoices</Typography>
+            <Button variant="contained" startIcon={<Add />} onClick={handleAddInvoice}>
+              Add Invoice
+            </Button>
+          </Box>
+          {/* <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
+            <Table>
+              <TableHead sx={{ bgcolor: 'success.main' }}>
+                <TableRow>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Invoice Number</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Invoice Date</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Total Amount</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {invoices.map((invoice) => (
+                  <TableRow key={invoice.id}>
+                    <TableCell>{invoice.invoiceNumber}</TableCell>
+                    <TableCell>{new Date(invoice.invoiceDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{formatCurrency(invoice.totalAmount)}</TableCell>
+                    <TableCell>
+                      <IconButton onClick={() => handleViewInvoice(invoice.id)} sx={{ color: 'primary.main' }}>
+                        <Visibility />
+                      </IconButton>
+                      <IconButton onClick={() => handleEditInvoice(invoice.id)} sx={{ color: 'secondary.main' }}>
+                        <Edit />
+                      </IconButton>
+                      <IconButton onClick={() => handleArchiveInvoice(invoice.id)} sx={{ color: 'warning.main' }}>
+                        <Archive />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer> */}
         </Box>
       </Box>
     </Container>

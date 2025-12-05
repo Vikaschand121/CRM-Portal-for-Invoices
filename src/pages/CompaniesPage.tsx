@@ -36,6 +36,9 @@ import {
   History,
   CloudUpload,
 } from '@mui/icons-material';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import {
@@ -47,7 +50,7 @@ import {
 } from '../types';
 import { companiesService } from '../services/companies.service';
 import { documentsService } from '../services/documents.service';
-import { formatDate } from '../utils/helpers';
+import { formatDate, formatShortDate, addDays } from '../utils/helpers';
 import { showSuccess, showError } from '../utils/snackbar';
 
 const validationSchema = Yup.object({
@@ -68,6 +71,8 @@ const COMPANY_DOCUMENT_TYPES = [
   'Company Incorporation Certificate',
   'Company Confirmation Statement',
   'Company Vat Certificate',
+  'Company Accounts',
+  'Company Insurance',
 ];
 
 const DATE_PLACEHOLDER = 'dd/mm/yyyy';
@@ -76,7 +81,7 @@ const buildDocumentName = (
   company: Company | null,
   type: string,
   subType?: string,
-  includeDatePlaceholder = true,
+  date?: string | null,
 ): string => {
   const base = company?.name?.trim() || 'Company Document';
   const segments = [type.trim()];
@@ -84,8 +89,18 @@ const buildDocumentName = (
     segments.push(subType.trim());
   }
   let name = `${base} ${segments.join(' - ')}`.trim();
-  if (includeDatePlaceholder) {
-    name = `${name} - ${DATE_PLACEHOLDER}`;
+
+  if (type === 'Company Accounts' || type === 'Company Insurance') {
+    if (date) {
+      const startDate = formatShortDate(date);
+      const endDate = formatShortDate(addDays(date, 364));
+      name = `${name} - ${startDate} to ${endDate}`;
+    } else {
+      name = `${name} - ${DATE_PLACEHOLDER} to ${DATE_PLACEHOLDER}`;
+    }
+  } else {
+    const dateStr = date ? formatShortDate(date) : DATE_PLACEHOLDER;
+    name = `${name} - ${dateStr}`;
   }
   return name;
 };
@@ -99,6 +114,7 @@ const CONFIRMATION_STATEMENT_YEARS = Array.from(
 interface CompanyDocumentForm extends Omit<CreateDocumentPayload, 'propertyId' | 'file'> {
   documentSubType?: string;
   files: File[];
+  documentDate?: string;
 }
 
 export const CompaniesPage = () => {
@@ -114,6 +130,7 @@ export const CompaniesPage = () => {
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [documentDialogLoading, setDocumentDialogLoading] = useState(false);
   const [documentUploading, setDocumentUploading] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [selectedCompanyForDocument, setSelectedCompanyForDocument] = useState<Company | null>(null);
   const [companyProperties, setCompanyProperties] = useState<CompanyProperty[]>([]);
   const [documentForm, setDocumentForm] = useState<CompanyDocumentForm>({
@@ -122,6 +139,7 @@ export const CompaniesPage = () => {
     documentSubType: '',
     companyId: undefined,
     files: [],
+    documentDate: '',
   });
   const [lastAutoDocumentName, setLastAutoDocumentName] = useState('');
 
@@ -208,6 +226,7 @@ export const CompaniesPage = () => {
       documentSubType: '',
       companyId: undefined,
       files: [],
+      documentDate: '',
     });
   };
 
@@ -235,6 +254,7 @@ export const CompaniesPage = () => {
         documentSubType: '',
         companyId: companyDetails.id,
         files: [],
+        documentDate: '',
       });
       setLastAutoDocumentName(defaultDocumentName);
     } catch (error) {
@@ -257,7 +277,7 @@ export const CompaniesPage = () => {
     let nextAutoName = '';
     setDocumentForm((prev) => {
       const nextSubType = nextType === 'Company Confirmation Statement' ? prev.documentSubType : '';
-      nextAutoName = buildDocumentName(selectedCompanyForDocument, nextType, nextSubType);
+      nextAutoName = buildDocumentName(selectedCompanyForDocument, nextType, nextSubType, prev.documentDate || null);
       const shouldUpdateName = !prev.documentName || prev.documentName === lastAutoDocumentName;
       return {
         ...prev,
@@ -272,11 +292,25 @@ export const CompaniesPage = () => {
   const handleStatementYearChange = (nextSubType: string) => {
     let nextAutoName = '';
     setDocumentForm((prev) => {
-      nextAutoName = buildDocumentName(selectedCompanyForDocument, prev.documentType, nextSubType, true);
+      nextAutoName = buildDocumentName(selectedCompanyForDocument, prev.documentType, nextSubType, prev.documentDate || null);
       const shouldUpdateName = !prev.documentName || prev.documentName === lastAutoDocumentName;
       return {
         ...prev,
         documentSubType: nextSubType,
+        documentName: shouldUpdateName ? nextAutoName : prev.documentName,
+      };
+    });
+    setLastAutoDocumentName(nextAutoName);
+  };
+
+  const handleDocumentDateChange = (date: string) => {
+    let nextAutoName = '';
+    setDocumentForm((prev) => {
+      nextAutoName = buildDocumentName(selectedCompanyForDocument, prev.documentType, prev.documentSubType, date);
+      const shouldUpdateName = !prev.documentName || prev.documentName === lastAutoDocumentName;
+      return {
+        ...prev,
+        documentDate: date,
         documentName: shouldUpdateName ? nextAutoName : prev.documentName,
       };
     });
@@ -738,6 +772,13 @@ export const CompaniesPage = () => {
                 fullWidth
                 helperText="Replace dd/mm/yyyy with the actual document date."
                 required
+                InputProps={{
+                  endAdornment: (
+                    <IconButton onClick={() => setDatePickerOpen(true)}>
+                      <CalendarToday />
+                    </IconButton>
+                  ),
+                }}
               />
               <Button variant="outlined" component="label" fullWidth>
                 {documentForm.files.length > 0 ? `${documentForm.files.length} file(s) selected` : 'Select document files'}
@@ -777,6 +818,27 @@ export const CompaniesPage = () => {
           >
             {documentUploading ? 'Uploading...' : 'Upload Documents'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={datePickerOpen} onClose={() => setDatePickerOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Select Document Date</DialogTitle>
+        <DialogContent>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DatePicker
+              label="Document Date"
+              value={documentForm.documentDate ? new Date(documentForm.documentDate) : null}
+              onChange={(date) => {
+                const dateStr = date ? date.toISOString().split('T')[0] : '';
+                handleDocumentDateChange(dateStr);
+                setDatePickerOpen(false);
+              }}
+              slotProps={{ textField: { fullWidth: true } }}
+            />
+          </LocalizationProvider>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDatePickerOpen(false)}>Cancel</Button>
         </DialogActions>
       </Dialog>
 

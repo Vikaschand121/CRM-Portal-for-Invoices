@@ -50,6 +50,7 @@ import {
   LocationOn,
   MonetizationOn,
   People,
+  Receipt,
   TrendingUp,
   Visibility,
   RemoveRedEye,
@@ -58,7 +59,6 @@ import {
   Property,
   Tenant,
   Document,
-  Invoice,
   CreateTenantPayload,
   CreateDocumentPayload,
   RentPaymentFrequency,
@@ -66,9 +66,7 @@ import {
 import { propertiesService } from '../services/properties.service';
 import { tenantsService } from '../services/tenants.service';
 import { documentsService } from '../services/documents.service';
-import { invoicesService } from '../services/invoices.service';
 import { useSnackbar } from '../hooks/useSnackbar';
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import { getQuarterRange } from '../utils/quarter';
 import DescriptionIcon from '@mui/icons-material/Description';
 
@@ -152,9 +150,6 @@ export const PropertyDetailPage = () => {
   const [tabValue, setTabValue] = useState(0);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
-  const [filterStatus, setFilterStatus] = useState<string>('');
   const [tenantDialogOpen, setTenantDialogOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [tenantForm, setTenantForm] = useState<CreateTenantPayload>({
@@ -212,8 +207,6 @@ export const PropertyDetailPage = () => {
         setTenants(tenantData);
         const documentData = await documentsService.getDocuments(parseInt(propertyId));
         setDocuments(documentData);
-        const invoiceData = await invoicesService.getInvoices(parseInt(propertyId));
-        setInvoices(invoiceData);
       } else {
         setError('Property not found');
       }
@@ -231,8 +224,6 @@ export const PropertyDetailPage = () => {
   useEffect(() => {
     if (location.state?.tab === 'tenants') {
       setTabValue(1); // Tenants tab
-    } else if (location.state?.tab === 'invoices') {
-      setTabValue(2); // Invoices tab
     }
   }, [location.state]);
 
@@ -240,22 +231,6 @@ export const PropertyDetailPage = () => {
     const netAmount = calculateNetAmount(tenantForm.aggreedAnnualRent, tenantForm.rentPaymentFrequency);
     setTenantForm(prev => ({ ...prev, netAmount }));
   }, [tenantForm.aggreedAnnualRent, tenantForm.rentPaymentFrequency]);
-
-  useEffect(() => {
-    let filtered = invoices;
-
-    if (filterStatus) {
-      filtered = filtered.filter(invoice => {
-        const balance = parseFloat(invoice.balanceDue || '0');
-        if (filterStatus === 'paid') return balance === 0;
-        if (filterStatus === 'unpaid') return balance === invoice.totalAmount;
-        if (filterStatus === 'partial') return balance > 0 && balance < invoice.totalAmount;
-        return true;
-      });
-    }
-
-    setFilteredInvoices(filtered);
-  }, [invoices, filterStatus]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -477,34 +452,6 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
     }
   };
 
-  // Invoice handlers
-  const handleAddInvoice = () => {
-    navigate(`/companies/${companyId}/properties/${propertyId}/invoices/new`);
-  };
-
-  const handleViewInvoice = (invoiceId: number) => {
-    navigate(`/companies/${companyId}/properties/${propertyId}/invoices/${invoiceId}`);
-  };
-
-  const handleEditInvoice = (invoiceId: number) => {
-    navigate(`/companies/${companyId}/properties/${propertyId}/invoices/${invoiceId}/edit`);
-  };
-
-  const handleArchiveInvoice = async (invoiceId: number) => {
-    if (window.confirm('Are you sure you want to archive this invoice?')) {
-      try {
-        await invoicesService.archiveInvoice(invoiceId);
-        showSnackbar('Invoice archived successfully', 'success');
-        loadData();
-      } catch (err) {
-        showSnackbar('Failed to archive invoice', 'error');
-      }
-    }
-  };
-
-  const handleDeleteInvoice = (invoiceId: number) => {
-    navigate(`/companies/${companyId}/properties/${propertyId}/invoices/${invoiceId}/delete`);
-  };
 
   const handleViewTenant = (tenantId: number) => {
     navigate(`/tenants/${tenantId}`);
@@ -559,12 +506,6 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
       value: tenants.length.toString(),
       helper: 'Current Tenants',
       icon: People,
-    },
-    {
-      label: 'Invoices',
-      value: invoices.length.toString(),
-      helper: 'Total Invoices',
-      icon: ReceiptLongIcon,
     },
   ];
 
@@ -759,7 +700,6 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
           <Tabs value={tabValue} onChange={handleTabChange} aria-label="property tabs">
             <Tab label="Overview" />
             <Tab label="Tenants" />
-            <Tab label="Invoices" />
           </Tabs>
         </Box>
 
@@ -1015,6 +955,9 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
                       <IconButton onClick={() => handleUploadTenantDocument(tenant)} sx={{ color: 'secondary.main' }}>
                         <CloudUpload />
                       </IconButton>
+                      <IconButton onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}/invoices/new`, { state: { tenantId: tenant.id } })} sx={{ color: 'success.main' }}>
+                        <Receipt />
+                      </IconButton>
                       <IconButton onClick={() => handleEditTenant(tenant)}>
                         <Edit />
                       </IconButton>
@@ -1030,78 +973,6 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
         </Box>
       )}
 
-      {tabValue === 2 && (
-        <Box sx={{ mt: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            
-            <Box sx={{ display: 'flex', gap: 1 }}>
-            <Typography variant="h6">Invoices</Typography>
-                <TextField
-                  label="Status"
-                  select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  fullWidth
-                  size="small"
-                >
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="paid">Paid</MenuItem>
-                  <MenuItem value="unpaid">Unpaid</MenuItem>
-                  <MenuItem value="partial">Partial</MenuItem>
-                </TextField>
-</Box>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              
-              <Button
-                variant="outlined"
-                startIcon={<History />}
-                onClick={() => navigate('/invoices/archived', { state: { fromProperty: propertyId, fromCompany: companyId, tab: 'invoices' } })}
-              >
-                View Archived
-              </Button>
-              <Button variant="contained" startIcon={<Add />} onClick={handleAddInvoice}>
-                Add Invoice
-              </Button>
-             
-            </Box>
-          </Box>
-
-          {/* Filters */}
-      
-          <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
-            <Table>
-              <TableHead sx={{ bgcolor: 'success.main' }}>
-                <TableRow>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Invoice Number</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Invoice Date</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Total Amount</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredInvoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell>{invoice.invoiceNumber}</TableCell>
-                    <TableCell>{new Date(invoice.invoiceDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{formatCurrency(invoice.totalAmount)}</TableCell>
-                    <TableCell>
-                      <IconButton onClick={() => handleViewInvoice(invoice.id)}>
-                        <Visibility />
-                      </IconButton>
-                      <IconButton onClick={() => handleEditInvoice(invoice.id)}>
-                        <Edit />
-                      </IconButton>
-                      <IconButton onClick={() => handleArchiveInvoice(invoice.id)}>
-                        <Archive />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      )}
       </Box>
 
       {/* Tenant Dialog */}
@@ -1355,22 +1226,6 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
                   {tenants.map((tenant) => (
                     <MenuItem key={tenant.id} value={tenant.id}>
                       {tenant.tenantName}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  label="Invoice"
-                  select
-                  value={documentForm.invoiceId ?? ''}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setDocumentForm({ ...documentForm, invoiceId: value === '' ? undefined : parseInt(value, 10) });
-                  }}
-                  fullWidth
-                >
-                  {invoices.map((invoice) => (
-                    <MenuItem key={invoice.id} value={invoice.id}>
-                      {invoice.invoiceNumber}
                     </MenuItem>
                   ))}
                 </TextField>
