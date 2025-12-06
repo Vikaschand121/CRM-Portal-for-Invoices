@@ -1074,12 +1074,14 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
               value={tenantForm.tenantEmail}
               onChange={(e) => setTenantForm({ ...tenantForm, tenantEmail: e.target.value })}
               fullWidth
+              required
             />
             <TextField
               label="Tenant Contact"
               value={tenantForm.tenantContact}
               onChange={(e) => setTenantForm({ ...tenantForm, tenantContact: e.target.value })}
               fullWidth
+              required
             />
             <TextField
               label="Tenant Corresponding Address"
@@ -1088,6 +1090,7 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
               fullWidth
               multiline
               rows={3}
+              required
             />
             <TextField
               label="Rent Start Date"
