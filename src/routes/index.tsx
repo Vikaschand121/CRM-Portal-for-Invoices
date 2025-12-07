@@ -44,6 +44,9 @@ import InvoiceCreatePage from '../pages/invoices/InvoiceCreatePage';
 import InvoiceEditPage from '../pages/invoices/InvoiceEditPage';
 import { InvoiceViewPage } from '../pages/invoices/InvoiceViewPage';
 import { InvoiceDeletePage } from '../pages/invoices/InvoiceDeletePage';
+import { InvoiceDocumentsPage } from '../pages/invoices/InvoiceDocumentsPage';
+import { InvoiceDocumentTypePage } from '../pages/invoices/InvoiceDocumentTypePage';
+import { InvoiceDocumentSubTypePage } from '../pages/invoices/InvoiceDocumentSubTypePage';
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div>
@@ -108,6 +111,9 @@ export const AppRoutes = () => {
         <Route path="companies/:companyId/properties/:propertyId/invoices/:invoiceId" element={<InvoiceViewPage />} />
         <Route path="companies/:companyId/properties/:propertyId/invoices/:invoiceId/edit" element={<InvoiceEditPage />} />
         <Route path="companies/:companyId/properties/:propertyId/invoices/:invoiceId/delete" element={<InvoiceDeletePage />} />
+        <Route path="companies/:companyId/properties/:propertyId/invoices/:invoiceId/documents" element={<InvoiceDocumentsPage />} />
+        <Route path="companies/:companyId/properties/:propertyId/invoices/:invoiceId/documents/type/:documentType" element={<InvoiceDocumentTypePage />} />
+        <Route path="companies/:companyId/properties/:propertyId/invoices/:invoiceId/documents/subtype/:documentSubType" element={<InvoiceDocumentSubTypePage />} />
         <Route path="companies/:companyId/properties/:propertyId/documents/:documentId" element={<DocumentViewerPage />} />
         <Route path="tenants/:tenantId" element={<TenantDetailPage />} />
         <Route path="tenants/:tenantId/documents" element={<TenantDocumentsPage />} />

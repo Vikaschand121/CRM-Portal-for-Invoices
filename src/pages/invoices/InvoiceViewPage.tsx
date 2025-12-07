@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Alert, Button, CircularProgress, Container, Stack } from '@mui/material';
-import { ArrowBack, Edit, Print, Delete } from '@mui/icons-material';
+import { ArrowBack, Edit, Print, Delete, Description } from '@mui/icons-material';
 import { Invoice } from '../../types';
 import { invoicesService } from '../../services/invoices.service';
 import { propertiesService } from '../../services/properties.service';
@@ -116,6 +116,9 @@ export const InvoiceViewPage = () => {
         <Stack direction="row" spacing={1}>
           <Button variant="outlined" startIcon={<Edit />} onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}/invoices/${invoiceId}/edit`)}>
             Edit Invoice
+          </Button>
+          <Button variant="outlined" startIcon={<Description />} onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}/invoices/${invoiceId}/documents`)}>
+            Documents
           </Button>
           <Button variant="outlined" startIcon={<Print />} onClick={handlePrint}>
             Print / PDF

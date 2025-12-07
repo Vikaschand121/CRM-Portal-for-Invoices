@@ -164,6 +164,49 @@ const buildInitialForm = (propertyId: number, companyId: number | null, tenantId
   };
 };
 
+const parseCurrencyValue = (value?: string | number): number => {
+  if (value === undefined || value === null) return 0;
+  const normalized = typeof value === 'string' ? value.replace(/[^0-9.-]/g, '') : value.toString();
+  if (!normalized) return 0;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const buildTenantDerivedPatch = (
+  tenant: Tenant,
+  currentForm: InvoiceFormState,
+  invoicesList: Invoice[],
+  propertyAddress?: string
+): Partial<InvoiceFormState> => {
+  const frequencyKey = tenant.rentPaymentFrequency?.toLowerCase();
+  const billingFrequency: BillingFrequency = frequencyKey === 'quarterly' ? 'quarterly' : 'monthly';
+  const baseStart = tenant.rentStartDate || currentForm.rentalPeriodStart || '';
+  const periodRange = computeRentalPeriodRange(baseStart, billingFrequency);
+  const tenantHasNetValue = tenant.netAmount?.trim() ? true : false;
+  const parsedTenantNet = tenantHasNetValue ? parseCurrencyValue(tenant.netAmount) : currentForm.netAmount || 0;
+  const safeNetAmount = Number.isFinite(parsedTenantNet) ? parsedTenantNet : currentForm.netAmount || 0;
+  const vatRate = tenant.isVatRegistered ? 0.2 : 0;
+  const vatAmount = Number((safeNetAmount * vatRate).toFixed(2));
+  const totalAmount = Number((safeNetAmount + vatAmount).toFixed(2));
+  const normalizedAddress = propertyAddress?.trim();
+  const invoiceNumber = normalizedAddress
+    ? generateInvoiceNumber(normalizedAddress, tenant.tenantName, currentForm.invoiceType, invoicesList)
+    : currentForm.invoiceNumber;
+
+  return {
+    tenantId: tenant.id.toString(),
+    billingFrequency,
+    rentalPeriodStart: periodRange.start || currentForm.rentalPeriodStart,
+    rentalPeriodEnd: periodRange.end || currentForm.rentalPeriodEnd,
+    netAmount: safeNetAmount,
+    vatAmount,
+    totalAmount,
+    billToName: tenant.tenantName,
+    billToAddress: tenant.tenantCorrespondingAddress || normalizedAddress || currentForm.billToAddress,
+    invoiceNumber,
+  };
+};
+
 interface InvoiceWorkspacePageProps {
   mode: WorkspaceMode;
 }
@@ -260,12 +303,24 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
           }
         } else {
           const tenantIdFromState = location.state?.tenantId;
+          const resolvedTenantId =
+            tenantIdFromState !== undefined && tenantIdFromState !== null ? Number(tenantIdFromState) : null;
+          const validTenantId = resolvedTenantId !== null && !Number.isNaN(resolvedTenantId) ? resolvedTenantId : null;
           const initialForm = buildInitialForm(
             numericPropertyId,
             foundProperty.company?.id ?? numericCompanyId,
-            tenantIdFromState
+            validTenantId
           );
-          const formWithTenant = { ...initialForm, tenantId: tenantIdFromState ? tenantIdFromState.toString() : null, billToName: '', billToAddress: '', invoiceNumber: `TEMP-${numericPropertyId}-${Date.now().toString().slice(-4)}` };
+          let formWithTenant = initialForm;
+          if (validTenantId) {
+            const matchingTenant = tenantList.find((t) => t.id === validTenantId);
+            if (matchingTenant) {
+              formWithTenant = {
+                ...formWithTenant,
+                ...buildTenantDerivedPatch(matchingTenant, formWithTenant, invoiceList, foundProperty.propertyAddress),
+              };
+            }
+          }
           setForm(formWithTenant);
         }
       } catch (err: any) {
@@ -283,6 +338,17 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
 
   const updateForm = (patch: Partial<InvoiceFormState>) => {
     setForm((prev) => (prev ? { ...prev, ...patch } : prev));
+  };
+
+  const handleTenantSelect = (tenantId: string) => {
+    const tenant = tenants.find((t) => t.id.toString() === tenantId);
+    if (!tenant) return;
+    setForm((prev) => {
+      if (!prev) return prev;
+      const patch = buildTenantDerivedPatch(tenant, prev, existingInvoices, property?.propertyAddress);
+      return { ...prev, ...patch };
+    });
+    setTimeout(() => handleRentalPeriodChange(), 100);
   };
 
   const handleRentalPeriodChange = () => {
@@ -491,42 +557,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
                 value={form.tenantId || ''}
                 fullWidth
                 required
-                onChange={(e) => {
-                  const tenantId = e.target.value;
-                  const tenant = tenants.find((t) => t.id.toString() === tenantId);
-                  setForm((prev) => {
-                    if (!prev) return prev;
-                    const invoiceNumber = generateInvoiceNumber(
-                      property?.propertyAddress ?? '',
-                      tenant?.tenantName ?? '',
-                      prev.invoiceType,
-                      existingInvoices
-                    );
-                    const billingFrequency = (tenant?.rentPaymentFrequency?.toLowerCase() as BillingFrequency) || 'monthly';
-                    const baseStart = tenant?.rentStartDate || prev.rentalPeriodStart || '';
-                    const periodRange = computeRentalPeriodRange(baseStart, billingFrequency);
-                    const rentalPeriodStart = periodRange.start || prev.rentalPeriodStart;
-                    const netAmount = parseFloat(tenant?.netAmount || '0');
-                    const vatRate = tenant?.isVatRegistered ? 0.2 : 0;
-                    const vatAmount = netAmount * vatRate;
-                    const totalAmount = netAmount + vatAmount;
-                    const rentalPeriodEnd = periodRange.end || prev.rentalPeriodEnd;
-                    return {
-                      ...prev,
-                      tenantId,
-                      billToName: tenant ? `${tenant.tenantName}` : prev.billToName,
-                      billToAddress: tenant?.tenantCorrespondingAddress ?? prev.billToAddress,
-                      invoiceNumber,
-                      billingFrequency,
-                      rentalPeriodStart,
-                      rentalPeriodEnd,
-                      netAmount,
-                      vatAmount,
-                      totalAmount,
-                    };
-                  });
-                  setTimeout(() => handleRentalPeriodChange(), 100);
-                }}
+                onChange={(e) => handleTenantSelect(e.target.value)}
               >
                 {tenants.map((tenant) => (
                   <MenuItem key={tenant.id} value={tenant.id.toString()}>
@@ -546,27 +577,6 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 Company: {property.company?.name}
               </Typography>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="Bill To Name"
-                value={form.billToName}
-                onChange={(e) => updateForm({ billToName: e.target.value })}
-                fullWidth
-                required
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="Bill To Address"
-                value={form.billToAddress}
-                onChange={(e) => updateForm({ billToAddress: e.target.value })}
-                fullWidth
-                multiline
-                rows={3}
-                required
-              />
             </Grid>
 
             <Grid item xs={12} md={4}>
@@ -593,13 +603,13 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             </Grid>
 
             <Grid item xs={12} md={4}>
-              <TextField label="Net Amount" type="number" value={form.netAmount} fullWidth InputProps={{ startAdornment: <InputAdornment position="start">£</InputAdornment> }} disabled />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField label={`VAT (${currentTenant?.isVatRegistered ? '20%' : '0%'})`} value={form.vatAmount.toFixed(2)} fullWidth InputProps={{ startAdornment: <InputAdornment position="start">£</InputAdornment> }} disabled />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField label="Total Amount" value={form.totalAmount.toFixed(2)} fullWidth InputProps={{ startAdornment: <InputAdornment position="start">£</InputAdornment> }} disabled />
+              <TextField
+                label={`VAT (${currentTenant?.isVatRegistered ? '20%' : '0%'})`}
+                value={form.vatAmount.toFixed(2)}
+                fullWidth
+                InputProps={{ startAdornment: <InputAdornment position="start">£</InputAdornment> }}
+                disabled
+              />
             </Grid>
 
             <Grid item xs={12} md={6}>

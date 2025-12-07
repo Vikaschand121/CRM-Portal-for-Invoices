@@ -19,23 +19,40 @@ import {
   TableContainer,
   Paper,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TextField,
+  MenuItem,
 } from '@mui/material';
 import {
   Add,
   ArrowBack,
   Business,
-  Description,
   Visibility,
   Archive,
   People,
   CalendarToday,
   LocationOn,
   MonetizationOn,
+  Edit,
+  CloudUpload,
 } from '@mui/icons-material';
-import { Tenant, Document } from '../types';
+import { Tenant, Invoice, CreateDocumentPayload } from '../types';
 import { tenantsService } from '../services/tenants.service';
+import { invoicesService } from '../services/invoices.service';
 import { documentsService } from '../services/documents.service';
 import { formatDate } from '../utils/helpers';
+import { useSnackbar } from '../hooks/useSnackbar';
+
+const INVOICE_DOCUMENT_TYPES = [
+  'Rent invoices',
+  'Rent deposit',
+  'Insurance',
+  'Credit notes',
+  'Service charge',
+];
 
 const GBP_FORMATTER = new Intl.NumberFormat('en-GB', {
   style: 'currency',
@@ -74,11 +91,20 @@ const InfoRow = ({ label, value }: { label: string; value: string }) => (
 export const TenantDetailPage = () => {
   const { tenantId } = useParams<{ tenantId: string }>();
   const navigate = useNavigate();
+  const { showSnackbar } = useSnackbar();
   const [tenant, setTenant] = useState<Tenant | null>(null);
-  const [documents, setDocuments] = useState<Document[]>([]);
-  // const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  const [documentForm, setDocumentForm] = useState<CreateDocumentPayload>({
+    documentName: '',
+    documentType: INVOICE_DOCUMENT_TYPES[0],
+    documentSubType: '',
+    file: null,
+    invoiceId: 0,
+  });
 
   useEffect(() => {
     const loadData = async () => {
@@ -93,10 +119,8 @@ export const TenantDetailPage = () => {
         setError(null);
         const tenantData = await tenantsService.getTenant(parseInt(tenantId));
         setTenant(tenantData);
-        const documentData = await documentsService.getDocumentsByTenant(parseInt(tenantId));
-        setDocuments(documentData);
-        // const invoiceData = await invoicesService.getInvoicesByTenant(parseInt(tenantId));
-        // setInvoices(invoiceData);
+        const invoiceData = await invoicesService.getInvoicesByTenant(parseInt(tenantId));
+        setInvoices(invoiceData);
       } catch (err) {
         setError('Failed to load tenant data');
       } finally {
@@ -107,16 +131,6 @@ export const TenantDetailPage = () => {
     loadData();
   }, [tenantId]);
 
-  const handleArchiveDocument = async (documentId: number) => {
-    if (window.confirm('Are you sure you want to archive this document?')) {
-      try {
-        await documentsService.archiveDocument(documentId);
-        setDocuments(prev => prev.filter(doc => doc.id !== documentId));
-      } catch (err) {
-        setError('Failed to archive document');
-      }
-    }
-  };
 
   const handleAddInvoice = () => {
     if (!tenant) return;
@@ -125,26 +139,62 @@ export const TenantDetailPage = () => {
     });
   };
 
-  // const handleViewInvoice = (invoiceId: number) => {
-  //   if (!tenant) return;
-  //   navigate(`/companies/${tenant.property?.company?.id}/properties/${tenant.propertyId}/invoices/${invoiceId}`);
-  // };
+  const handleViewInvoice = (invoiceId: number) => {
+    if (!tenant) return;
+    navigate(`/companies/${tenant.property?.company?.id}/properties/${tenant.property?.id || tenant.propertyId}/invoices/${invoiceId}`);
+  };
 
-  // const handleEditInvoice = (invoiceId: number) => {
-  //   if (!tenant) return;
-  //   navigate(`/companies/${tenant.property?.company?.id}/properties/${tenant.propertyId}/invoices/${invoiceId}/edit`);
-  // };
+  const handleEditInvoice = (invoiceId: number) => {
+    if (!tenant) return;
+    navigate(`/companies/${tenant.property?.company?.id}/properties/${tenant.property?.id || tenant.propertyId}/invoices/${invoiceId}/edit`);
+  };
 
-  // const handleArchiveInvoice = async (invoiceId: number) => {
-  //   if (window.confirm('Are you sure you want to archive this invoice?')) {
-  //     try {
-  //       await invoicesService.archiveInvoice(invoiceId);
-  //       setInvoices(prev => prev.filter(inv => inv.id !== invoiceId));
-  //     } catch (err) {
-  //       setError('Failed to archive invoice');
-  //     }
-  //   }
-  // };
+  const handleArchiveInvoice = async (invoiceId: number) => {
+    if (window.confirm('Are you sure you want to archive this invoice?')) {
+      try {
+        await invoicesService.archiveInvoice(invoiceId);
+        setInvoices(prev => prev.filter(inv => inv.id !== invoiceId));
+      } catch (err) {
+        setError('Failed to archive invoice');
+      }
+    }
+  };
+
+  const handleUploadInvoiceDocument = (invoiceId: number) => {
+    setSelectedInvoiceId(invoiceId);
+    setDocumentForm({
+      documentName: '',
+      documentType: INVOICE_DOCUMENT_TYPES[0],
+      documentSubType: '',
+      file: null,
+      invoiceId: invoiceId,
+    });
+    setDocumentDialogOpen(true);
+  };
+
+  const handleSaveDocument = async () => {
+    // Validation
+    if (!documentForm.documentName.trim()) {
+      showSnackbar('Document name is required', 'error');
+      return;
+    }
+    if (!documentForm.documentType.trim()) {
+      showSnackbar('Document type is required', 'error');
+      return;
+    }
+    if (!documentForm.file) {
+      showSnackbar('Please select a file to upload', 'error');
+      return;
+    }
+
+    try {
+      await documentsService.createDocument(documentForm);
+      showSnackbar('Document uploaded successfully', 'success');
+      setDocumentDialogOpen(false);
+    } catch (err) {
+      showSnackbar('Failed to upload document', 'error');
+    }
+  };
 
   if (loading) {
     return (
@@ -187,17 +237,11 @@ export const TenantDetailPage = () => {
       icon: MonetizationOn,
     },
     {
-      label: 'Documents',
-      value: documents.length.toString(),
-      helper: 'Total Documents',
-      icon: Description,
+      label: 'Invoices',
+      value: invoices.length.toString(),
+      helper: 'Total Invoices',
+      icon: Business,
     },
-    // {
-    //   label: 'Invoices',
-    //   value: invoices.length.toString(),
-    //   helper: 'Total Invoices',
-    //   icon: ReceiptLongIcon,
-    // },
   ];
 
   return (
@@ -280,24 +324,6 @@ export const TenantDetailPage = () => {
                 width: { xs: '100%', md: 'auto' },
                 justifyContent: { xs: 'center', md: 'flex-end' }
               }}>
-                <Button
-                  startIcon={<Description />}
-                  onClick={() => navigate(`/tenants/${tenantId}/documents`)}
-                  sx={{
-                    mb: { xs: 0, md: 2 },
-                    bgcolor: 'rgba(255, 255, 255, 0.2)',
-                    color: 'white',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    '&:hover': {
-                      bgcolor: 'rgba(255, 255, 255, 0.3)',
-                    },
-                    width: { xs: '100%', sm: 'auto' },
-                    minWidth: { xs: '200px', sm: 'auto' },
-                  }}
-                >
-                  View Documents
-                </Button>
                 <Button
                   startIcon={<ArrowBack />}
                   onClick={() => navigate(`/companies/${tenant?.property?.company?.id}/properties/${tenant?.property?.id}`, { state: { tab: 'tenants' } })}
@@ -503,41 +529,6 @@ export const TenantDetailPage = () => {
           </Card>
         </Box>
 
-        {/* Documents Section */}
-        <Box sx={{ mt: 4 }}>
-          <Typography variant="h6" gutterBottom>Documents</Typography>
-          <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
-            <Table>
-              <TableHead sx={{ bgcolor: 'secondary.main' }}>
-                <TableRow>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Document Name</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Type</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Sub-Type</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Uploaded</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {documents.map((doc) => (
-                  <TableRow key={doc.id}>
-                    <TableCell>{doc.documentName}</TableCell>
-                    <TableCell>{doc.documentType}</TableCell>
-                    <TableCell>{doc.documentSubType || 'N/A'}</TableCell>
-                    <TableCell>{new Date(doc.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <IconButton onClick={() => window.open(doc.fileUrl, '_blank')} sx={{ color: 'primary.main' }}>
-                        <Visibility />
-                      </IconButton>
-                      <IconButton onClick={() => handleArchiveDocument(doc.id)} sx={{ color: 'warning.main' }}>
-                        <Archive />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
 
         {/* Invoices Section */}
         <Box sx={{ mt: 4 }}>
@@ -547,13 +538,14 @@ export const TenantDetailPage = () => {
               Add Invoice
             </Button>
           </Box>
-          {/* <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
+          <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
             <Table>
               <TableHead sx={{ bgcolor: 'success.main' }}>
                 <TableRow>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Invoice Number</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Invoice Date</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Total Amount</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Status</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -564,11 +556,21 @@ export const TenantDetailPage = () => {
                     <TableCell>{new Date(invoice.invoiceDate).toLocaleDateString()}</TableCell>
                     <TableCell>{formatCurrency(invoice.totalAmount)}</TableCell>
                     <TableCell>
+                      <Chip
+                        label={invoice.isArchived ? 'Archived' : 'Active'}
+                        color={invoice.isArchived ? 'default' : 'success'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
                       <IconButton onClick={() => handleViewInvoice(invoice.id)} sx={{ color: 'primary.main' }}>
                         <Visibility />
                       </IconButton>
                       <IconButton onClick={() => handleEditInvoice(invoice.id)} sx={{ color: 'secondary.main' }}>
                         <Edit />
+                      </IconButton>
+                      <IconButton onClick={() => handleUploadInvoiceDocument(invoice.id)} sx={{ color: 'info.main' }}>
+                        <CloudUpload />
                       </IconButton>
                       <IconButton onClick={() => handleArchiveInvoice(invoice.id)} sx={{ color: 'warning.main' }}>
                         <Archive />
@@ -578,8 +580,48 @@ export const TenantDetailPage = () => {
                 ))}
               </TableBody>
             </Table>
-          </TableContainer> */}
+          </TableContainer>
         </Box>
+
+        {/* Document Upload Dialog */}
+        <Dialog open={documentDialogOpen} onClose={() => setDocumentDialogOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Upload Document for Invoice {invoices.find(inv => inv.id === selectedInvoiceId)?.invoiceNumber}</DialogTitle>
+          <DialogContent>
+            <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                label="Document Name"
+                value={documentForm.documentName}
+                onChange={(e) => setDocumentForm({ ...documentForm, documentName: e.target.value })}
+                fullWidth
+                required
+              />
+              <TextField
+                select
+                label="Document Type"
+                value={documentForm.documentType}
+                onChange={(e) => setDocumentForm({ ...documentForm, documentType: e.target.value })}
+                fullWidth
+                required
+              >
+                {INVOICE_DOCUMENT_TYPES.map((type) => (
+                  <MenuItem key={type} value={type}>
+                    {type}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <input
+                type="file"
+                onChange={(e) => setDocumentForm({ ...documentForm, file: e.target.files?.[0] || null })}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDocumentDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveDocument} variant="contained">
+              Upload
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Container>
   );
