@@ -622,6 +622,17 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
                 onChange={(e) => updateForm({ paymentMade: Number(e.target.value) || 0 })}
               />
             </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Notes"
+                value={form.notes}
+                onChange={(e) => updateForm({ notes: e.target.value })}
+                fullWidth
+                multiline
+                minRows={3}
+                maxRows={6}
+              />
+            </Grid>
             {/* <Grid item xs={12} md={6}>
               <TextField
                 label="Balance Due (leave blank to auto-calc)"

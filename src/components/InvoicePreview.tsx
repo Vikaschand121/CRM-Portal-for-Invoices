@@ -51,15 +51,16 @@ const InfoLine = ({ label, value }: { label: string; value: string }) => (
 const SummaryRow = ({ label, value, bold, highlight, negative }: { label: string; value: string; bold?: boolean; highlight?: boolean; negative?: boolean }) => (
   <Box
     sx={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      py: 1,
+      display: 'grid',
+      gridTemplateColumns: 'minmax(140px, 1fr) minmax(120px, 1fr)',
+      gap: 1,
+      py: 0.75,
       px: 1.5,
       bgcolor: highlight ? '#f6f7fb' : 'transparent',
       borderRadius: highlight ? 1 : 0,
       color: negative ? 'error.main' : 'inherit',
       fontWeight: bold ? 700 : 500,
+      textAlign: 'right',
     }}
   >
     <Typography variant="body2" fontWeight={bold ? 700 : 500}>
@@ -131,6 +132,7 @@ export const InvoicePreview = ({
     : computedBalance;
 
   const periodLabel = `${formatDate(rentalPeriodStart)} to ${formatDate(rentalPeriodEnd)}`;
+  const notesSummary = notes?.trim() || 'No notes provided.';
 
   return (
     <Box
@@ -226,10 +228,6 @@ export const InvoicePreview = ({
 
       <Divider sx={{ my: 3 }} />
 
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-        Previous Balance Due - {formatCurrency(safePreviousBalance)}
-      </Typography>
-
       <Box sx={{ border: '1px solid #dfe3eb', borderRadius: 1, overflow: 'hidden', mb: 2 }}>
         <Box
           sx={{
@@ -281,11 +279,40 @@ export const InvoicePreview = ({
         </Box>
       </Box>
 
-      <Box sx={{ maxWidth: 360, ml: 'auto' }}>
-        <SummaryRow label="Sub Total" value={formatCurrency(safeNet)} />
-        <SummaryRow label="Total" value={formatCurrency(safeTotal)} bold />
-        <SummaryRow label="Payment Made" value={formatCurrency(-safePaymentMade)} negative />
-        <SummaryRow label="Balance Due" value={formatCurrency(safeBalanceDue)} bold highlight />
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: 4,
+          flexWrap: 'wrap',
+          mb: 2,
+        }}
+      >
+        <Box sx={{ flex: '1 1 320px', maxWidth: 640, minWidth: 240, textAlign: 'left' }}>
+          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
+            Notes
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>
+            {notesSummary}
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            flex: '0 0 360px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0.5,
+            alignItems: 'stretch',
+            textAlign: 'right',
+          }}
+        >
+          <SummaryRow label="Previous Balance Due" value={formatCurrency(safePreviousBalance)} />
+          <SummaryRow label="Sub Total" value={formatCurrency(safeNet)} />
+          <SummaryRow label="Total" value={formatCurrency(safeTotal)} bold />
+          <SummaryRow label="Payment Made" value={formatCurrency(-safePaymentMade)} negative />
+          <SummaryRow label="Balance Due" value={formatCurrency(safeBalanceDue)} bold highlight />
+        </Box>
       </Box>
 
       <Box sx={{ mt: 3 }}>
