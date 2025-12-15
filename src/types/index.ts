@@ -320,3 +320,47 @@ export interface BankDetails {
 export interface CreateBankDetailsPayload extends BankDetails {}
 
 export interface UpdateBankDetailsPayload extends BankDetails {}
+
+export interface Payment {
+  id: number;
+  invoiceId: number;
+  invoiceNumber: string;
+  paymentDate: string;
+  amountReceived: string;
+  paymentMethod: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePaymentPayload {
+  invoiceId: number;
+  invoiceNumber: string;
+  paymentDate: string;
+  amountReceived: string;
+  paymentMethod: string;
+}
+
+export interface UpdatePaymentPayload extends CreatePaymentPayload {}
+
+export interface CreditNote {
+  id: number;
+  creditNoteDate: string;
+  creditNoteAmount: string;
+  description: string;
+  invoiceId: number;
+  invoiceNumber: string;
+  tenantId: number;
+  tenantName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCreditNotePayload {
+  tenantId: number;
+  invoiceId: number;
+  creditNoteDate: string;
+  creditNoteAmount: string;
+  description: string;
+}
+
+export interface UpdateCreditNotePayload extends CreateCreditNotePayload {}

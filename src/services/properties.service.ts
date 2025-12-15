@@ -1,5 +1,5 @@
 import { api } from './api';
-import { Property, CreatePropertyPayload, UpdatePropertyPayload, BankDetails, CreateBankDetailsPayload, UpdateBankDetailsPayload } from '../types';
+import { Property, CreatePropertyPayload, UpdatePropertyPayload, BankDetails, CreateBankDetailsPayload, UpdateBankDetailsPayload, Payment, CreatePaymentPayload, UpdatePaymentPayload, CreditNote, CreateCreditNotePayload, UpdateCreditNotePayload } from '../types';
 
 class PropertiesService {
   async getProperties(): Promise<Property[]> {
@@ -44,6 +44,46 @@ class PropertiesService {
 
   async deleteBankDetails(companyId: number): Promise<void> {
     return api.delete<void>(`/property-management/companies/${companyId}/bank-details`);
+  }
+
+  async getPaymentDetails(): Promise<Payment[]> {
+    return api.get<Payment[]>('/property-management/payment-details');
+  }
+
+  async createPayment(payload: CreatePaymentPayload): Promise<Payment> {
+    return api.post<Payment>('/property-management/payment-details', payload);
+  }
+
+  async getPayment(id: number): Promise<Payment> {
+    return api.get<Payment>(`/property-management/payment-details/${id}`);
+  }
+
+  async updatePayment(id: number, payload: UpdatePaymentPayload): Promise<Payment> {
+    return api.patch<Payment>(`/property-management/payment-details/${id}`, payload);
+  }
+
+  async deletePayment(id: number): Promise<void> {
+    return api.delete<void>(`/property-management/payment-details/${id}`);
+  }
+
+  async getCreditNotes(): Promise<CreditNote[]> {
+    return api.get<CreditNote[]>('/property-management/credit-notes');
+  }
+
+  async createCreditNote(payload: CreateCreditNotePayload): Promise<CreditNote> {
+    return api.post<CreditNote>('/property-management/credit-notes', payload);
+  }
+
+  async getCreditNote(id: number): Promise<CreditNote> {
+    return api.get<CreditNote>(`/property-management/credit-notes/${id}`);
+  }
+
+  async updateCreditNote(id: number, payload: UpdateCreditNotePayload): Promise<CreditNote> {
+    return api.patch<CreditNote>(`/property-management/credit-notes/${id}`, payload);
+  }
+
+  async deleteCreditNote(id: number): Promise<void> {
+    return api.delete<void>(`/property-management/credit-notes/${id}`);
   }
 }
 

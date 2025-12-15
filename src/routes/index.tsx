@@ -47,6 +47,8 @@ import { InvoiceDeletePage } from '../pages/invoices/InvoiceDeletePage';
 import { InvoiceDocumentsPage } from '../pages/invoices/InvoiceDocumentsPage';
 import { InvoiceDocumentTypePage } from '../pages/invoices/InvoiceDocumentTypePage';
 import { InvoiceDocumentSubTypePage } from '../pages/invoices/InvoiceDocumentSubTypePage';
+import { PaymentDetailPage } from '../pages/PaymentDetailPage';
+import { CreditNoteDetailPage } from '../pages/CreditNoteDetailPage';
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div>
@@ -119,6 +121,8 @@ export const AppRoutes = () => {
         <Route path="tenants/:tenantId/documents" element={<TenantDocumentsPage />} />
         <Route path="tenants/:tenantId/documents/type/:documentType" element={<TenantDocumentTypePage />} />
         <Route path="tenants/:tenantId/documents/subtype/:documentSubType" element={<TenantDocumentSubTypePage />} />
+        <Route path="payments/:paymentId" element={<PaymentDetailPage />} />
+        <Route path="credit-notes/:creditNoteId" element={<CreditNoteDetailPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="legal" element={<LegalPage />} />
         <Route path="financial" element={<FinancialPage />} />
