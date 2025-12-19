@@ -102,6 +102,8 @@ export const TenantDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
+  const [paymentDocumentDialogOpen, setPaymentDocumentDialogOpen] = useState(false);
+  const [creditNoteDocumentDialogOpen, setCreditNoteDocumentDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [creditNoteDialogOpen, setCreditNoteDialogOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
@@ -113,6 +115,20 @@ export const TenantDetailPage = () => {
     documentSubType: '',
     file: null,
     invoiceId: 0,
+  });
+  const [paymentDocumentForm, setPaymentDocumentForm] = useState<CreateDocumentPayload>({
+    documentName: '',
+    documentType: 'Receipts',
+    documentSubType: '',
+    file: null,
+    paymentDetailId: 0,
+  });
+  const [creditNoteDocumentForm, setCreditNoteDocumentForm] = useState<CreateDocumentPayload>({
+    documentName: '',
+    documentType: 'Credit notes',
+    documentSubType: '',
+    file: null,
+    creditNoteId: 0,
   });
   const [paymentForm, setPaymentForm] = useState<CreatePaymentPayload>({
     invoiceId: 0,
@@ -198,6 +214,30 @@ export const TenantDetailPage = () => {
       invoiceId: invoiceId,
     });
     setDocumentDialogOpen(true);
+  };
+
+  const handleUploadPaymentDocument = (paymentId: number) => {
+    setSelectedPaymentId(paymentId);
+    setPaymentDocumentForm({
+      documentName: '',
+      documentType: 'Receipts',
+      documentSubType: '',
+      file: null,
+      paymentDetailId: paymentId,
+    });
+    setPaymentDocumentDialogOpen(true);
+  };
+
+  const handleUploadCreditNoteDocument = (creditNoteId: number) => {
+    setSelectedCreditNoteId(creditNoteId);
+    setCreditNoteDocumentForm({
+      documentName: '',
+      documentType: 'Credit notes',
+      documentSubType: '',
+      file: null,
+      creditNoteId: creditNoteId,
+    });
+    setCreditNoteDocumentDialogOpen(true);
   };
 
   const handleAddPayment = (invoice: Invoice) => {
@@ -303,6 +343,54 @@ export const TenantDetailPage = () => {
       await documentsService.createDocument(documentForm);
       showSnackbar('Document uploaded successfully', 'success');
       setDocumentDialogOpen(false);
+    } catch (err) {
+      showSnackbar('Failed to upload document', 'error');
+    }
+  };
+
+  const handleSavePaymentDocument = async () => {
+    // Validation
+    if (!paymentDocumentForm.documentName.trim()) {
+      showSnackbar('Document name is required', 'error');
+      return;
+    }
+    if (!paymentDocumentForm.documentType.trim()) {
+      showSnackbar('Document type is required', 'error');
+      return;
+    }
+    if (!paymentDocumentForm.file) {
+      showSnackbar('Please select a file to upload', 'error');
+      return;
+    }
+
+    try {
+      await documentsService.createDocument(paymentDocumentForm);
+      showSnackbar('Document uploaded successfully', 'success');
+      setPaymentDocumentDialogOpen(false);
+    } catch (err) {
+      showSnackbar('Failed to upload document', 'error');
+    }
+  };
+
+  const handleSaveCreditNoteDocument = async () => {
+    // Validation
+    if (!creditNoteDocumentForm.documentName.trim()) {
+      showSnackbar('Document name is required', 'error');
+      return;
+    }
+    if (!creditNoteDocumentForm.documentType.trim()) {
+      showSnackbar('Document type is required', 'error');
+      return;
+    }
+    if (!creditNoteDocumentForm.file) {
+      showSnackbar('Please select a file to upload', 'error');
+      return;
+    }
+
+    try {
+      await documentsService.createDocument(creditNoteDocumentForm);
+      showSnackbar('Document uploaded successfully', 'success');
+      setCreditNoteDocumentDialogOpen(false);
     } catch (err) {
       showSnackbar('Failed to upload document', 'error');
     }
@@ -810,6 +898,9 @@ export const TenantDetailPage = () => {
                       <IconButton onClick={() => handleEditPayment(payment)} sx={{ color: 'secondary.main' }}>
                         <Edit />
                       </IconButton>
+                      <IconButton onClick={() => handleUploadPaymentDocument(payment.id)} sx={{ color: 'info.main' }}>
+                        <CloudUpload />
+                      </IconButton>
                       <IconButton onClick={() => handleArchivePayment(payment.id)} sx={{ color: 'warning.main' }}>
                         <Archive />
                       </IconButton>
@@ -857,6 +948,9 @@ export const TenantDetailPage = () => {
                       </IconButton>
                       <IconButton onClick={() => handleEditCreditNote(creditNote)} sx={{ color: 'secondary.main' }}>
                         <Edit />
+                      </IconButton>
+                      <IconButton onClick={() => handleUploadCreditNoteDocument(creditNote.id)} sx={{ color: 'info.main' }}>
+                        <CloudUpload />
                       </IconButton>
                       <IconButton onClick={() => handleArchiveCreditNote(creditNote.id)} sx={{ color: 'warning.main' }}>
                         <Archive />
@@ -1015,6 +1109,84 @@ export const TenantDetailPage = () => {
             <Button onClick={() => setCreditNoteDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSaveCreditNote} variant="contained">
               {selectedCreditNoteId ? 'Update' : 'Create'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Payment Document Upload Dialog */}
+        <Dialog open={paymentDocumentDialogOpen} onClose={() => setPaymentDocumentDialogOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Upload Document for Payment</DialogTitle>
+          <DialogContent>
+            <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                label="Document Name"
+                value={paymentDocumentForm.documentName}
+                onChange={(e) => setPaymentDocumentForm({ ...paymentDocumentForm, documentName: e.target.value })}
+                fullWidth
+                required
+              />
+              <TextField
+                select
+                label="Document Type"
+                value={paymentDocumentForm.documentType}
+                onChange={(e) => setPaymentDocumentForm({ ...paymentDocumentForm, documentType: e.target.value })}
+                fullWidth
+                required
+              >
+                <MenuItem value="Receipts">Receipts</MenuItem>
+                <MenuItem value="Bank statements">Bank statements</MenuItem>
+                <MenuItem value="Payment confirmations">Payment confirmations</MenuItem>
+                <MenuItem value="Other">Other</MenuItem>
+              </TextField>
+              <input
+                type="file"
+                onChange={(e) => setPaymentDocumentForm({ ...paymentDocumentForm, file: e.target.files?.[0] || null })}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setPaymentDocumentDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSavePaymentDocument} variant="contained">
+              Upload
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Credit Note Document Upload Dialog */}
+        <Dialog open={creditNoteDocumentDialogOpen} onClose={() => setCreditNoteDocumentDialogOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Upload Document for Credit Note</DialogTitle>
+          <DialogContent>
+            <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                label="Document Name"
+                value={creditNoteDocumentForm.documentName}
+                onChange={(e) => setCreditNoteDocumentForm({ ...creditNoteDocumentForm, documentName: e.target.value })}
+                fullWidth
+                required
+              />
+              <TextField
+                select
+                label="Document Type"
+                value={creditNoteDocumentForm.documentType}
+                onChange={(e) => setCreditNoteDocumentForm({ ...creditNoteDocumentForm, documentType: e.target.value })}
+                fullWidth
+                required
+              >
+                <MenuItem value="Credit notes">Credit notes</MenuItem>
+                <MenuItem value="Adjustment letters">Adjustment letters</MenuItem>
+                <MenuItem value="Refund confirmations">Refund confirmations</MenuItem>
+                <MenuItem value="Other">Other</MenuItem>
+              </TextField>
+              <input
+                type="file"
+                onChange={(e) => setCreditNoteDocumentForm({ ...creditNoteDocumentForm, file: e.target.files?.[0] || null })}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCreditNoteDocumentDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveCreditNoteDocument} variant="contained">
+              Upload
             </Button>
           </DialogActions>
         </Dialog>

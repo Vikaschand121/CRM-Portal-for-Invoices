@@ -9,11 +9,39 @@ import {
   Container,
   Typography,
   CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TableContainer,
+  Paper,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  MenuItem,
 } from '@mui/material';
-import { ArrowBack } from '@mui/icons-material';
-import { CreditNote } from '../types';
+import {
+  ArrowBack,
+  Visibility,
+  CloudUpload,
+  Archive,
+} from '@mui/icons-material';
+import { CreditNote, Document, CreateDocumentPayload } from '../types';
 import { propertiesService } from '../services/properties.service';
+import { documentsService } from '../services/documents.service';
 import { formatDate } from '../utils/helpers';
+import { useSnackbar } from '../hooks/useSnackbar';
+
+const CREDIT_NOTE_DOCUMENT_TYPES = [
+  'Credit notes',
+  'Adjustment letters',
+  'Refund confirmations',
+  'Other',
+];
 
 const GBP_FORMATTER = new Intl.NumberFormat('en-GB', {
   style: 'currency',
@@ -52,12 +80,22 @@ const InfoRow = ({ label, value }: { label: string; value: string }) => (
 export const CreditNoteDetailPage = () => {
   const { creditNoteId } = useParams<{ creditNoteId: string }>();
   const navigate = useNavigate();
+  const { showSnackbar } = useSnackbar();
   const [creditNote, setCreditNote] = useState<CreditNote | null>(null);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
+  const [documentForm, setDocumentForm] = useState<CreateDocumentPayload>({
+    documentName: '',
+    documentType: CREDIT_NOTE_DOCUMENT_TYPES[0],
+    documentSubType: '',
+    file: null,
+    creditNoteId: 0,
+  });
 
   useEffect(() => {
-    const loadCreditNote = async () => {
+    const loadData = async () => {
       if (!creditNoteId) {
         setError('Credit Note ID is missing');
         setLoading(false);
@@ -69,6 +107,8 @@ export const CreditNoteDetailPage = () => {
         setError(null);
         const creditNoteData = await propertiesService.getCreditNote(parseInt(creditNoteId));
         setCreditNote(creditNoteData);
+        const documentData = await documentsService.getDocumentsByCreditNote(parseInt(creditNoteId));
+        setDocuments(documentData);
       } catch (err) {
         setError('Failed to load credit note details');
       } finally {
@@ -76,8 +116,64 @@ export const CreditNoteDetailPage = () => {
       }
     };
 
-    loadCreditNote();
+    loadData();
   }, [creditNoteId]);
+
+  const handleUploadDocument = () => {
+    if (!creditNote) return;
+    setDocumentForm({
+      documentName: '',
+      documentType: CREDIT_NOTE_DOCUMENT_TYPES[0],
+      documentSubType: '',
+      file: null,
+      creditNoteId: creditNote.id,
+    });
+    setDocumentDialogOpen(true);
+  };
+
+  const handleViewDocument = (documentId: number) => {
+    navigate(`/documents/${documentId}`);
+  };
+
+  const handleArchiveDocument = async (documentId: number) => {
+    if (window.confirm('Are you sure you want to archive this document?')) {
+      try {
+        await documentsService.archiveDocument(documentId);
+        setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+        showSnackbar('Document archived successfully', 'success');
+      } catch (err) {
+        showSnackbar('Failed to archive document', 'error');
+      }
+    }
+  };
+
+  const handleSaveDocument = async () => {
+    if (!documentForm.documentName.trim()) {
+      showSnackbar('Document name is required', 'error');
+      return;
+    }
+    if (!documentForm.documentType.trim()) {
+      showSnackbar('Document type is required', 'error');
+      return;
+    }
+    if (!documentForm.file) {
+      showSnackbar('Please select a file to upload', 'error');
+      return;
+    }
+
+    try {
+      await documentsService.createDocument(documentForm);
+      showSnackbar('Document uploaded successfully', 'success');
+      setDocumentDialogOpen(false);
+      // Refresh documents
+      if (creditNoteId) {
+        const documentData = await documentsService.getDocumentsByCreditNote(parseInt(creditNoteId));
+        setDocuments(documentData);
+      }
+    } catch (err) {
+      showSnackbar('Failed to upload document', 'error');
+    }
+  };
 
   if (loading) {
     return (
@@ -172,8 +268,28 @@ export const CreditNoteDetailPage = () => {
                 display: 'flex',
                 gap: 1,
                 width: { xs: '100%', md: 'auto' },
-                justifyContent: { xs: 'center', md: 'flex-end' }
+                justifyContent: { xs: 'center', md: 'flex-end' },
+                flexDirection: { xs: 'column', sm: 'row' }
               }}>
+                <Button
+                  startIcon={<Visibility />}
+                  onClick={() => navigate(`/credit-notes/${creditNoteId}/documents`)}
+                  sx={{
+                    mb: { xs: 0, md: 2 },
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    '&:hover': {
+                      bgcolor: 'rgba(255, 255, 255, 0.3)',
+                      transform: 'translateY(-2px)',
+                    },
+                    width: { xs: '100%', sm: 'auto' },
+                    minWidth: { xs: '200px', sm: 'auto' },
+                  }}
+                >
+                  View Documents
+                </Button>
                 <Button
                   startIcon={<ArrowBack />}
                   onClick={() => navigate(-1)}
@@ -305,6 +421,85 @@ export const CreditNoteDetailPage = () => {
             </Box>
           </CardContent>
         </Card>
+
+        {/* Documents Section */}
+        <Box sx={{ mt: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">Documents</Typography>
+            <Button variant="contained" startIcon={<CloudUpload />} onClick={handleUploadDocument}>
+              Upload Document
+            </Button>
+          </Box>
+          <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
+            <Table>
+              <TableHead sx={{ bgcolor: 'error.main' }}>
+                <TableRow>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Document Name</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Type</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Uploaded Date</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {documents.map((document) => (
+                  <TableRow key={document.id}>
+                    <TableCell>{document.documentName}</TableCell>
+                    <TableCell>{document.documentType}</TableCell>
+                    <TableCell>{new Date(document.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <IconButton onClick={() => handleViewDocument(document.id)} sx={{ color: 'primary.main' }}>
+                        <Visibility />
+                      </IconButton>
+                      <IconButton onClick={() => handleArchiveDocument(document.id)} sx={{ color: 'warning.main' }}>
+                        <Archive />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+
+        {/* Document Upload Dialog */}
+        <Dialog open={documentDialogOpen} onClose={() => setDocumentDialogOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Upload Document for Credit Note</DialogTitle>
+          <DialogContent>
+            <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                label="Document Name"
+                value={documentForm.documentName}
+                onChange={(e) => setDocumentForm({ ...documentForm, documentName: e.target.value })}
+                fullWidth
+                required
+              />
+              <TextField
+                select
+                label="Document Type"
+                value={documentForm.documentType}
+                onChange={(e) => setDocumentForm({ ...documentForm, documentType: e.target.value })}
+                fullWidth
+                required
+              >
+                {CREDIT_NOTE_DOCUMENT_TYPES.map((type) => (
+                  <MenuItem key={type} value={type}>
+                    {type}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <input
+                type="file"
+                onChange={(e) => setDocumentForm({ ...documentForm, file: e.target.files?.[0] || null })}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDocumentDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveDocument} variant="contained">
+              Upload
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Container>
   );

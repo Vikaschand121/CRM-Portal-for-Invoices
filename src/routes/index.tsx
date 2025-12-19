@@ -51,6 +51,18 @@ import { InvoiceDocumentTypePage } from '../pages/invoices/InvoiceDocumentTypePa
 import { InvoiceDocumentSubTypePage } from '../pages/invoices/InvoiceDocumentSubTypePage';
 import { PaymentDetailPage } from '../pages/PaymentDetailPage';
 import { CreditNoteDetailPage } from '../pages/CreditNoteDetailPage';
+import { PaymentDocumentsPage } from '../pages/PaymentDocumentsPage';
+import { PaymentDocumentTypePage } from '../pages/PaymentDocumentTypePage';
+import { PaymentDocumentSubTypePage } from '../pages/PaymentDocumentSubTypePage';
+import { ArchivedPaymentDocumentsPage } from '../pages/ArchivedPaymentDocumentsPage';
+import { ArchivedPaymentDocumentTypePage } from '../pages/ArchivedPaymentDocumentTypePage';
+import { ArchivedPaymentDocumentSubTypePage } from '../pages/ArchivedPaymentDocumentSubTypePage';
+import { CreditNoteDocumentsPage } from '../pages/CreditNoteDocumentsPage';
+import { CreditNoteDocumentTypePage } from '../pages/CreditNoteDocumentTypePage';
+import { CreditNoteDocumentSubTypePage } from '../pages/CreditNoteDocumentSubTypePage';
+import { ArchivedCreditNoteDocumentsPage } from '../pages/ArchivedCreditNoteDocumentsPage';
+import { ArchivedCreditNoteDocumentTypePage } from '../pages/ArchivedCreditNoteDocumentTypePage';
+import { ArchivedCreditNoteDocumentSubTypePage } from '../pages/ArchivedCreditNoteDocumentSubTypePage';
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div>
@@ -126,7 +138,19 @@ export const AppRoutes = () => {
         <Route path="tenants/:tenantId/documents/type/:documentType" element={<TenantDocumentTypePage />} />
         <Route path="tenants/:tenantId/documents/subtype/:documentSubType" element={<TenantDocumentSubTypePage />} />
         <Route path="payments/:paymentId" element={<PaymentDetailPage />} />
+        <Route path="payments/:paymentId/documents" element={<PaymentDocumentsPage />} />
+        <Route path="payments/:paymentId/documents/type/:documentType" element={<PaymentDocumentTypePage />} />
+        <Route path="payments/:paymentId/documents/subtype/:documentSubType" element={<PaymentDocumentSubTypePage />} />
+        <Route path="payments/:paymentId/documents/archived" element={<ArchivedPaymentDocumentsPage />} />
+        <Route path="payments/:paymentId/documents/archived/type/:documentType" element={<ArchivedPaymentDocumentTypePage />} />
+        <Route path="payments/:paymentId/documents/archived/subtype/:documentSubType" element={<ArchivedPaymentDocumentSubTypePage />} />
         <Route path="credit-notes/:creditNoteId" element={<CreditNoteDetailPage />} />
+        <Route path="credit-notes/:creditNoteId/documents" element={<CreditNoteDocumentsPage />} />
+        <Route path="credit-notes/:creditNoteId/documents/type/:documentType" element={<CreditNoteDocumentTypePage />} />
+        <Route path="credit-notes/:creditNoteId/documents/subtype/:documentSubType" element={<CreditNoteDocumentSubTypePage />} />
+        <Route path="credit-notes/:creditNoteId/documents/archived" element={<ArchivedCreditNoteDocumentsPage />} />
+        <Route path="credit-notes/:creditNoteId/documents/archived/type/:documentType" element={<ArchivedCreditNoteDocumentTypePage />} />
+        <Route path="credit-notes/:creditNoteId/documents/archived/subtype/:documentSubType" element={<ArchivedCreditNoteDocumentSubTypePage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="legal" element={<LegalPage />} />
         <Route path="financial" element={<FinancialPage />} />

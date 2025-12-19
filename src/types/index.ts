@@ -220,6 +220,9 @@ export interface Document {
   companyId?: number;
   tenantId?: number;
   propertyId: number;
+  invoiceId?: number;
+  creditNoteId?: number;
+  paymentDetailId?: number;
   createdAt: string;
   updatedAt: string;
   isArchived?: boolean;
@@ -233,8 +236,10 @@ export interface CreateDocumentPayload {
   documentSubType?: string;
   companyId?: number;
   tenantId?: number;
-  propertyId: number;
+  propertyId?: number;
   invoiceId?: number;
+  creditNoteId?: number;
+  paymentDetailId?: number;
   file: File | null;
 }
 

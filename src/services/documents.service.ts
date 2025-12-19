@@ -50,6 +50,16 @@ class DocumentsService {
     return docs.map((doc) => this.normalizeDocument(doc));
   }
 
+  async getDocumentsByPayment(paymentDetailId: number): Promise<Document[]> {
+    const docs = await api.get<Document[]>(`/property-management/documents/payment/${paymentDetailId}`);
+    return docs.map((doc) => this.normalizeDocument(doc));
+  }
+
+  async getDocumentsByCreditNote(creditNoteId: number): Promise<Document[]> {
+    const docs = await api.get<Document[]>(`/property-management/documents/credit-note/${creditNoteId}`);
+    return docs.map((doc) => this.normalizeDocument(doc));
+  }
+
   async createDocument(payload: CreateDocumentPayload): Promise<Document> {
     const formData = new FormData();
     formData.append('documentName', payload.documentName);
@@ -69,6 +79,12 @@ class DocumentsService {
     }
     if (payload.invoiceId !== undefined) {
       formData.append('invoiceId', payload.invoiceId.toString());
+    }
+    if (payload.creditNoteId !== undefined) {
+      formData.append('creditNoteId', payload.creditNoteId.toString());
+    }
+    if (payload.paymentDetailId !== undefined) {
+      formData.append('paymentDetailId', payload.paymentDetailId.toString());
     }
 
     if (payload.file) {
