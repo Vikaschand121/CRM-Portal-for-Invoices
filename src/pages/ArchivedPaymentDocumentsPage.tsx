@@ -291,6 +291,93 @@ export const ArchivedPaymentDocumentsPage = () => {
             ))}
           </Box>
         )}
+
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
+            Archived Documents
+          </Typography>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: 'repeat(1, 1fr)',
+                sm: 'repeat(2, 1fr)',
+                md: 'repeat(3, 1fr)',
+              },
+              gap: 3,
+            }}
+          >
+            {documents.map((doc) => (
+              <Card
+                key={doc.id}
+                sx={{
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.1)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 32px 64px rgba(15, 23, 42, 0.15)',
+                  },
+                }}
+              >
+                <CardContent sx={{ p: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                    <Avatar
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: 'secondary.main',
+                        color: 'white',
+                      }}
+                    >
+                      <Description fontSize="small" />
+                    </Avatar>
+                    <Typography variant="h6" fontWeight={700} sx={{ color: 'secondary.main' }}>
+                      {doc.documentName}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Uploaded: {new Date(doc.createdAt).toLocaleDateString()}
+                  </Typography>
+                  {doc.documentSubType && (
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Sub-type: {doc.documentSubType}
+                    </Typography>
+                  )}
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                    <Button
+                      startIcon={<OpenInNew />}
+                      onClick={() => window.open(doc.fileUrl, '_blank')}
+                      variant="outlined"
+                      size="small"
+                    >
+                      View Document
+                    </Button>
+                    <IconButton
+                      onClick={() => handleRestoreDocument(doc.id)}
+                      sx={{ color: 'success.main' }}
+                      size="small"
+                    >
+                      <Restore />
+                    </IconButton>
+                  </Box>
+                </CardContent>
+              </Card>
+            ))}
+          </Box>
+          {documents.length === 0 && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              No archived documents to restore.
+            </Alert>
+          )}
+        </Box>
       </Box>
     </Container>
   );

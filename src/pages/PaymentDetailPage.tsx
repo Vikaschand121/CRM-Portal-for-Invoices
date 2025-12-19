@@ -9,39 +9,14 @@ import {
   Container,
   Typography,
   CircularProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TableContainer,
-  Paper,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
 } from '@mui/material';
 import {
   ArrowBack,
   Visibility,
-  CloudUpload,
-  Archive,
 } from '@mui/icons-material';
-import { Payment, Document, CreateDocumentPayload } from '../types';
+import { Payment } from '../types';
 import { propertiesService } from '../services/properties.service';
-import { documentsService } from '../services/documents.service';
 import { formatDate } from '../utils/helpers';
-import { useSnackbar } from '../hooks/useSnackbar';
-
-const PAYMENT_DOCUMENT_TYPES = [
-  'Receipts',
-  'Bank statements',
-  'Payment confirmations',
-  'Other',
-];
 
 const GBP_FORMATTER = new Intl.NumberFormat('en-GB', {
   style: 'currency',
@@ -80,19 +55,17 @@ const InfoRow = ({ label, value }: { label: string; value: string }) => (
 export const PaymentDetailPage = () => {
   const { paymentId } = useParams<{ paymentId: string }>();
   const navigate = useNavigate();
-  const { showSnackbar } = useSnackbar();
   const [payment, setPayment] = useState<Payment | null>(null);
-  const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
-  const [documentForm, setDocumentForm] = useState<CreateDocumentPayload>({
-    documentName: '',
-    documentType: PAYMENT_DOCUMENT_TYPES[0],
-    documentSubType: '',
-    file: null,
-    paymentDetailId: 0,
-  });
+
+  const handleBack = () => {
+    if (payment?.tenantId) {
+      navigate(`/tenants/${payment.tenantId}`);
+    } else {
+      navigate(-1);
+    }
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -107,8 +80,6 @@ export const PaymentDetailPage = () => {
         setError(null);
         const paymentData = await propertiesService.getPayment(parseInt(paymentId));
         setPayment(paymentData);
-        const documentData = await documentsService.getDocumentsByPayment(parseInt(paymentId));
-        setDocuments(documentData);
       } catch (err) {
         setError('Failed to load payment details');
       } finally {
@@ -119,61 +90,6 @@ export const PaymentDetailPage = () => {
     loadData();
   }, [paymentId]);
 
-  const handleUploadDocument = () => {
-    if (!payment) return;
-    setDocumentForm({
-      documentName: '',
-      documentType: PAYMENT_DOCUMENT_TYPES[0],
-      documentSubType: '',
-      file: null,
-      paymentDetailId: payment.id,
-    });
-    setDocumentDialogOpen(true);
-  };
-
-  const handleViewDocument = (documentId: number) => {
-    navigate(`/documents/${documentId}`);
-  };
-
-  const handleArchiveDocument = async (documentId: number) => {
-    if (window.confirm('Are you sure you want to archive this document?')) {
-      try {
-        await documentsService.archiveDocument(documentId);
-        setDocuments(prev => prev.filter(doc => doc.id !== documentId));
-        showSnackbar('Document archived successfully', 'success');
-      } catch (err) {
-        showSnackbar('Failed to archive document', 'error');
-      }
-    }
-  };
-
-  const handleSaveDocument = async () => {
-    if (!documentForm.documentName.trim()) {
-      showSnackbar('Document name is required', 'error');
-      return;
-    }
-    if (!documentForm.documentType.trim()) {
-      showSnackbar('Document type is required', 'error');
-      return;
-    }
-    if (!documentForm.file) {
-      showSnackbar('Please select a file to upload', 'error');
-      return;
-    }
-
-    try {
-      await documentsService.createDocument(documentForm);
-      showSnackbar('Document uploaded successfully', 'success');
-      setDocumentDialogOpen(false);
-      // Refresh documents
-      if (paymentId) {
-        const documentData = await documentsService.getDocumentsByPayment(parseInt(paymentId));
-        setDocuments(documentData);
-      }
-    } catch (err) {
-      showSnackbar('Failed to upload document', 'error');
-    }
-  };
 
   if (loading) {
     return (
@@ -191,7 +107,7 @@ export const PaymentDetailPage = () => {
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate(-1)}>
+        <Button startIcon={<ArrowBack />} onClick={handleBack}>
           Back
         </Button>
       </Container>
@@ -292,7 +208,7 @@ export const PaymentDetailPage = () => {
                 </Button>
                 <Button
                   startIcon={<ArrowBack />}
-                  onClick={() => navigate(-1)}
+                  onClick={handleBack}
                   sx={{
                     mb: { xs: 0, md: 2 },
                     bgcolor: 'rgba(255, 255, 255, 0.2)',
@@ -415,90 +331,14 @@ export const PaymentDetailPage = () => {
               <InfoRow label="Payment Date" value={new Date(payment.paymentDate).toLocaleDateString()} />
               <InfoRow label="Amount Received" value={formatCurrency(parseFloat(payment.amountReceived))} />
               <InfoRow label="Payment Method" value={payment.paymentMethod} />
+              <InfoRow label="Tenant" value={payment.tenantName} />
+              <InfoRow label="Archived" value={payment.isArchived ? 'Yes' : 'No'} />
               <InfoRow label="Created At" value={formatDate(payment.createdAt)} />
               <InfoRow label="Updated At" value={formatDate(payment.updatedAt)} />
             </Box>
           </CardContent>
         </Card>
 
-        {/* Documents Section */}
-        <Box sx={{ mt: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">Documents</Typography>
-            <Button variant="contained" startIcon={<CloudUpload />} onClick={handleUploadDocument}>
-              Upload Document
-            </Button>
-          </Box>
-          <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
-            <Table>
-              <TableHead sx={{ bgcolor: 'success.main' }}>
-                <TableRow>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Document Name</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Type</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Uploaded Date</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {documents.map((document) => (
-                  <TableRow key={document.id}>
-                    <TableCell>{document.documentName}</TableCell>
-                    <TableCell>{document.documentType}</TableCell>
-                    <TableCell>{new Date(document.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <IconButton onClick={() => handleViewDocument(document.id)} sx={{ color: 'primary.main' }}>
-                        <Visibility />
-                      </IconButton>
-                      <IconButton onClick={() => handleArchiveDocument(document.id)} sx={{ color: 'warning.main' }}>
-                        <Archive />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-
-        {/* Document Upload Dialog */}
-        <Dialog open={documentDialogOpen} onClose={() => setDocumentDialogOpen(false)} maxWidth="md" fullWidth>
-          <DialogTitle>Upload Document for Payment</DialogTitle>
-          <DialogContent>
-            <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField
-                label="Document Name"
-                value={documentForm.documentName}
-                onChange={(e) => setDocumentForm({ ...documentForm, documentName: e.target.value })}
-                fullWidth
-                required
-              />
-              <TextField
-                select
-                label="Document Type"
-                value={documentForm.documentType}
-                onChange={(e) => setDocumentForm({ ...documentForm, documentType: e.target.value })}
-                fullWidth
-                required
-              >
-                {PAYMENT_DOCUMENT_TYPES.map((type) => (
-                  <MenuItem key={type} value={type}>
-                    {type}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <input
-                type="file"
-                onChange={(e) => setDocumentForm({ ...documentForm, file: e.target.files?.[0] || null })}
-              />
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDocumentDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveDocument} variant="contained">
-              Upload
-            </Button>
-          </DialogActions>
-        </Dialog>
       </Box>
     </Container>
   );

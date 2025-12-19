@@ -51,7 +51,7 @@ class DocumentsService {
   }
 
   async getDocumentsByPayment(paymentDetailId: number): Promise<Document[]> {
-    const docs = await api.get<Document[]>(`/property-management/documents/payment/${paymentDetailId}`);
+    const docs = await api.get<Document[]>(`/property-management/documents/payment-detail/${paymentDetailId}`);
     return docs.map((doc) => this.normalizeDocument(doc));
   }
 

@@ -329,12 +329,15 @@ export interface UpdateBankDetailsPayload extends BankDetails {}
 export interface Payment {
   id: number;
   invoiceId: number;
+  tenantId: number;
   invoiceNumber: string;
+  tenantName: string;
   paymentDate: string;
   amountReceived: string;
   paymentMethod: string;
   createdAt: string;
   updatedAt: string;
+  isArchived: boolean;
 }
 
 export interface CreatePaymentPayload {

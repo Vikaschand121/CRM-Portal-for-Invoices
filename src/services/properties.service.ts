@@ -74,8 +74,8 @@ class PropertiesService {
     return api.patch<void>(`/property-management/payment-details/archive/${id}`, { isArchived: false });
   }
 
-  async getArchivedPayments(): Promise<Payment[]> {
-    return api.get<Payment[]>('/property-management/payment-details/archived');
+  async getArchivedPayments(tenantId: number): Promise<Payment[]> {
+    return api.get<Payment[]>(`/property-management/payment-details/archived/${tenantId}`);
   }
 
   async getCreditNotes(tenantId: number): Promise<CreditNote[]> {

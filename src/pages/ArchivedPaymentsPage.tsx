@@ -44,11 +44,18 @@ export const ArchivedPaymentsPage = () => {
   const [loading, setLoading] = useState(true);
 
   const fromTenant = location.state?.fromTenant;
+  const searchTenantId = new URLSearchParams(location.search).get('tenantId');
+  const resolvedTenantId = fromTenant ?? (searchTenantId ? parseInt(searchTenantId, 10) : undefined);
 
   const loadPayments = async () => {
     try {
       setLoading(true);
-      const data = await propertiesService.getArchivedPayments();
+      if (!resolvedTenantId) {
+        showError('Tenant context missing for archived payments');
+        setLoading(false);
+        return;
+      }
+      const data = await propertiesService.getArchivedPayments(resolvedTenantId);
       setPayments(data);
     } catch (error) {
       showError('Failed to load archived payments');
@@ -71,7 +78,7 @@ export const ArchivedPaymentsPage = () => {
 
   useEffect(() => {
     loadPayments();
-  }, []);
+  }, [resolvedTenantId]);
 
   if (loading) {
     return (
@@ -92,11 +99,11 @@ export const ArchivedPaymentsPage = () => {
           <Button startIcon={<ArrowBack />} onClick={() => navigate('/property-management')}>
             Back to Property Management
           </Button>
-          {fromTenant && (
+          {resolvedTenantId && (
             <Button
               startIcon={<ArrowBack />}
               variant="outlined"
-              onClick={() => navigate(`/tenants/${fromTenant}`)}
+              onClick={() => navigate(`/tenants/${resolvedTenantId}`)}
             >
               Back to Tenant
             </Button>
