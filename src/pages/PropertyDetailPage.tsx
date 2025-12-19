@@ -32,6 +32,7 @@ import {
   Tab,
   Tabs,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import {
@@ -179,6 +180,21 @@ export const PropertyDetailPage = () => {
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [deleteDocumentId, setDeleteDocumentId] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [savingTenant, setSavingTenant] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [deletingDocument, setDeletingDocument] = useState(false);
+  const [archiveTenantDialogOpen, setArchiveTenantDialogOpen] = useState(false);
+  const [tenantToArchive, setTenantToArchive] = useState<Tenant | null>(null);
+  const [archivingTenant, setArchivingTenant] = useState(false);
+  const [archiveDocumentDialogOpen, setArchiveDocumentDialogOpen] = useState(false);
+  const [documentToArchive, setDocumentToArchive] = useState<Document | null>(null);
+  const [archivingDocument, setArchivingDocument] = useState(false);
+  const [documentFormErrors, setDocumentFormErrors] = useState({
+    documentName: false,
+    documentType: false,
+    documentSubType: false,
+    file: false,
+  });
   const [documentForm, setDocumentForm] = useState<CreateDocumentPayload>({
     documentName: '',
     documentType: COMPANY_DOCUMENT_TYPES[0],
@@ -317,15 +333,24 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
     setTenantDialogOpen(true);
   };
 
-  const handleArchiveTenant = async (id: number) => {
-    if (window.confirm('Are you sure you want to archive this tenant?')) {
-      try {
-        await tenantsService.archiveTenant(id);
-        showSnackbar('Tenant archived successfully', 'success');
-        loadData();
-      } catch (err) {
-        showSnackbar('Failed to archive tenant', 'error');
-      }
+  const handleArchiveTenant = (tenant: Tenant) => {
+    setTenantToArchive(tenant);
+    setArchiveTenantDialogOpen(true);
+  };
+
+  const handleConfirmArchiveTenant = async () => {
+    if (!tenantToArchive) return;
+    setArchivingTenant(true);
+    try {
+      await tenantsService.archiveTenant(tenantToArchive.id);
+      showSnackbar('Tenant archived successfully', 'success');
+      setArchiveTenantDialogOpen(false);
+      setTenantToArchive(null);
+      loadData();
+    } catch (err) {
+      showSnackbar('Failed to archive tenant', 'error');
+    } finally {
+      setArchivingTenant(false);
     }
   };
 
@@ -345,6 +370,7 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
       return;
     }
 
+    setSavingTenant(true);
     try {
       const payload = normalizeTenantPayload(tenantForm);
       if (editingTenant) {
@@ -358,6 +384,8 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
       loadData();
     } catch (err) {
       showSnackbar('Failed to save tenant', 'error');
+    } finally {
+      setSavingTenant(false);
     }
   };
 
@@ -370,6 +398,12 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
       file: null,
       propertyId: parseInt(propertyId || '0'),
       companyId: parseInt(companyId || '0'),
+    });
+    setDocumentFormErrors({
+      documentName: false,
+      documentType: false,
+      documentSubType: false,
+      file: false,
     });
     setDocumentDialogOpen(true);
   };
@@ -384,11 +418,18 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
       companyId: parseInt(companyId || '0'),
       tenantId: tenant.id,
     });
+    setDocumentFormErrors({
+      documentName: false,
+      documentType: false,
+      documentSubType: false,
+      file: false,
+    });
     setDocumentDialogOpen(true);
   };
 
   const handleDeleteDocument = async () => {
     if (!deleteDocumentId) return;
+    setDeletingDocument(true);
     try {
       await documentsService.deleteDocument(deleteDocumentId);
       showSnackbar('Document deleted successfully', 'success');
@@ -397,51 +438,49 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
       loadData();
     } catch (err) {
       showSnackbar('Failed to delete document', 'error');
+    } finally {
+      setDeletingDocument(false);
     }
   };
 
-  const handleArchiveDocument = async (documentId: number) => {
-    if (window.confirm('Are you sure you want to archive this document?')) {
-      try {
-        await documentsService.archiveDocument(documentId);
-        showSnackbar('Document archived successfully', 'success');
-        loadData();
-      } catch (err) {
-        showSnackbar('Failed to archive document', 'error');
-      }
+  const handleArchiveDocument = (document: Document) => {
+    setDocumentToArchive(document);
+    setArchiveDocumentDialogOpen(true);
+  };
+
+  const handleConfirmArchiveDocument = async () => {
+    if (!documentToArchive) return;
+    setArchivingDocument(true);
+    try {
+      await documentsService.archiveDocument(documentToArchive.id);
+      showSnackbar('Document archived successfully', 'success');
+      setArchiveDocumentDialogOpen(false);
+      setDocumentToArchive(null);
+      loadData();
+    } catch (err) {
+      showSnackbar('Failed to archive document', 'error');
+    } finally {
+      setArchivingDocument(false);
     }
   };
 
   const handleSaveDocument = async () => {
     // Validation
-    if (!documentForm.documentName.trim()) {
-      showSnackbar('Document name is required', 'error');
-      return;
-    }
-    if (!documentForm.documentType.trim()) {
-      showSnackbar('Document type is required', 'error');
-      return;
-    }
-    if (
-      documentForm.documentType === 'Company Confirmation Statement' &&
-      !documentForm.documentSubType
-    ) {
-      showSnackbar('Please select a year for the confirmation statement', 'error');
-      return;
-    }
-    if (
-      documentForm.documentType === 'Invoices' &&
-      documentForm.tenantId &&
-      !documentForm.documentSubType
-    ) {
-      showSnackbar('Please select an invoice type', 'error');
-      return;
-    }
-    if (!documentForm.file) {
-      showSnackbar('Please select a file to upload', 'error');
+    const errors = {
+      documentName: !documentForm.documentName.trim(),
+      documentType: !documentForm.documentType.trim(),
+      documentSubType:
+        (documentForm.documentType === 'Company Confirmation Statement' && !documentForm.documentSubType) ||
+        (documentForm.documentType === 'Invoices' && documentForm.tenantId && !documentForm.documentSubType),
+      file: !documentForm.file,
+    };
+    setDocumentFormErrors(errors);
+
+    if (Object.values(errors).some(Boolean)) {
       return;
     }
 
+    setUploadingDocument(true);
     try {
       await documentsService.createDocument(documentForm);
       showSnackbar('Document uploaded successfully', 'success');
@@ -449,6 +488,8 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
       loadData();
     } catch (err) {
       showSnackbar('Failed to upload document', 'error');
+    } finally {
+      setUploadingDocument(false);
     }
   };
 
@@ -949,21 +990,31 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
                     <TableCell>{tenant.breakDate && !isNaN(new Date(tenant.breakDate).getTime()) ? new Date(tenant.breakDate).toLocaleDateString() : tenant.breakDate || 'N/A'}</TableCell>
                     {/* <TableCell>{tenant.isVatAvailable ? 'Yes' : 'No'}</TableCell> */}
                     <TableCell>
-                      <IconButton onClick={() => handleViewTenant(tenant.id)} sx={{ color: 'primary.main' }}>
-                        <RemoveRedEye />
-                      </IconButton>
-                      <IconButton onClick={() => handleUploadTenantDocument(tenant)} sx={{ color: 'secondary.main' }}>
-                        <CloudUpload />
-                      </IconButton>
-                      <IconButton onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}/invoices/new`, { state: { tenantId: tenant.id } })} sx={{ color: 'success.main' }}>
-                        <Receipt />
-                      </IconButton>
-                      <IconButton onClick={() => handleEditTenant(tenant)}>
-                        <Edit />
-                      </IconButton>
-                      <IconButton onClick={() => handleArchiveTenant(tenant.id)}>
-                        <Archive />
-                      </IconButton>
+                      <Tooltip title="View Tenant Details">
+                        <IconButton onClick={() => handleViewTenant(tenant.id)} sx={{ color: 'primary.main' }}>
+                          <RemoveRedEye />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Upload Document">
+                        <IconButton onClick={() => handleUploadTenantDocument(tenant)} sx={{ color: 'secondary.main' }}>
+                          <CloudUpload />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Create Invoice">
+                        <IconButton onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}/invoices/new`, { state: { tenantId: tenant.id } })} sx={{ color: 'success.main' }}>
+                          <Receipt />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Edit Tenant">
+                        <IconButton onClick={() => handleEditTenant(tenant)}>
+                          <Edit />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Archive Tenant">
+                        <IconButton onClick={() => handleArchiveTenant(tenant)}>
+                          <Archive />
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1132,9 +1183,9 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setTenantDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSaveTenant} variant="contained">
-            {editingTenant ? 'Update' : 'Create'}
+          <Button onClick={() => setTenantDialogOpen(false)} disabled={savingTenant}>Cancel</Button>
+          <Button onClick={handleSaveTenant} variant="contained" disabled={savingTenant}>
+            {savingTenant ? 'Saving...' : editingTenant ? 'Update' : 'Create'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1155,6 +1206,8 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
               onChange={(e) => setDocumentForm({ ...documentForm, documentName: e.target.value })}
               fullWidth
               required
+              error={documentFormErrors.documentName}
+              helperText={documentFormErrors.documentName ? "* required" : ""}
             />
             <TextField
               select
@@ -1169,6 +1222,8 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
               }
               fullWidth
               required
+              error={documentFormErrors.documentType}
+              helperText={documentFormErrors.documentType ? "* required" : ""}
             >
               {(documentForm.tenantId ? TENANT_DOCUMENT_TYPES : COMPANY_DOCUMENT_TYPES).map((type) => (
                 <MenuItem key={type} value={type}>
@@ -1186,6 +1241,8 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
                 }
                 fullWidth
                 required
+                error={documentFormErrors.documentSubType}
+                helperText={documentFormErrors.documentSubType ? "* required" : ""}
               >
                 <MenuItem value="">Select a year</MenuItem>
                 {CONFIRMATION_STATEMENT_YEARS.map((year) => (
@@ -1205,6 +1262,8 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
                 }
                 fullWidth
                 required
+                error={documentFormErrors.documentSubType}
+                helperText={documentFormErrors.documentSubType ? "* required" : ""}
               >
                 <MenuItem value="">Select invoice type</MenuItem>
                 {TENANT_INVOICE_SUBTYPES.map((subType) => (
@@ -1241,9 +1300,9 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDocumentDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSaveDocument} variant="contained">
-            Upload
+          <Button onClick={() => setDocumentDialogOpen(false)} disabled={uploadingDocument}>Cancel</Button>
+          <Button onClick={handleSaveDocument} variant="contained" disabled={uploadingDocument}>
+            {uploadingDocument ? 'Uploading...' : 'Upload'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1255,9 +1314,45 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
           <Typography>Are you sure you want to delete this document? This action cannot be undone.</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeleteDocument} variant="contained" color="error">
-            Delete
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={deletingDocument}>Cancel</Button>
+          <Button onClick={handleDeleteDocument} variant="contained" color="error" disabled={deletingDocument}>
+            {deletingDocument ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Archive Tenant Dialog */}
+      <Dialog open={archiveTenantDialogOpen} onClose={() => setArchiveTenantDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Archive Tenant</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to archive the tenant "{tenantToArchive?.tenantName}"? This action can be undone by restoring it from the archived tenants.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setArchiveTenantDialogOpen(false)} disabled={archivingTenant}>
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmArchiveTenant} variant="contained" color="error" disabled={archivingTenant}>
+            {archivingTenant ? 'Archiving...' : 'Archive'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Archive Document Dialog */}
+      <Dialog open={archiveDocumentDialogOpen} onClose={() => setArchiveDocumentDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Archive Document</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to archive the document "{documentToArchive?.documentName}"? This action can be undone by restoring it from the archived documents.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setArchiveDocumentDialogOpen(false)} disabled={archivingDocument}>
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmArchiveDocument} variant="contained" color="error" disabled={archivingDocument}>
+            {archivingDocument ? 'Archiving...' : 'Archive'}
           </Button>
         </DialogActions>
       </Dialog>

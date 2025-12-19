@@ -5,8 +5,8 @@ export const showSuccess = (message: string) => {
     variant: 'success',
     autoHideDuration: 4000,
     anchorOrigin: {
-      vertical: 'top',
-      horizontal: 'right',
+      vertical: 'bottom',
+      horizontal: 'center',
     },
   });
 };
@@ -16,8 +16,8 @@ export const showError = (message: string) => {
     variant: 'error',
     autoHideDuration: 6000,
     anchorOrigin: {
-      vertical: 'top',
-      horizontal: 'right',
+      vertical: 'bottom',
+      horizontal: 'center',
     },
   });
 };
@@ -27,8 +27,8 @@ export const showInfo = (message: string) => {
     variant: 'info',
     autoHideDuration: 4000,
     anchorOrigin: {
-      vertical: 'top',
-      horizontal: 'right',
+      vertical: 'bottom',
+      horizontal: 'center',
     },
   });
 };
@@ -38,8 +38,8 @@ export const showWarning = (message: string) => {
     variant: 'warning',
     autoHideDuration: 5000,
     anchorOrigin: {
-      vertical: 'top',
-      horizontal: 'right',
+      vertical: 'bottom',
+      horizontal: 'center',
     },
   });
 };

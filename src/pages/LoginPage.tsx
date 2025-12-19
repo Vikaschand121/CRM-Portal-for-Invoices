@@ -259,7 +259,7 @@ export const LoginPage = () => {
                       },
                     }}
                   >
-                    {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
+                    {loading ? 'Signing In...' : 'Sign In'}
                   </Button>
                 </form>
 

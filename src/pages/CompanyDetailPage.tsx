@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Alert,
   Avatar,
   Box,
   Button,
@@ -16,10 +15,10 @@ import {
   Divider,
   LinearProgress,
   Paper,
-  Snackbar,
   TextField,
   Typography,
 } from '@mui/material';
+import { showSuccess, showError } from '../utils/snackbar';
 import {
   AccountBalance,
   ArrowBack,
@@ -97,6 +96,7 @@ export const CompanyDetailPage = () => {
   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
   const [bankDetailsLoading, setBankDetailsLoading] = useState(false);
   const [bankDetailsDialogOpen, setBankDetailsDialogOpen] = useState(false);
+  const [savingBankDetails, setSavingBankDetails] = useState(false);
   const [bankDetailsForm, setBankDetailsForm] = useState<CreateBankDetailsPayload>({
     accountHolderName: '',
     bankName: '',
@@ -104,11 +104,6 @@ export const CompanyDetailPage = () => {
     accountNumber: '',
     bankAddress: '',
   });
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error';
-  }>({ open: false, message: '', severity: 'success' });
 
   const loadCompany = async () => {
     if (!id) {
@@ -120,11 +115,7 @@ export const CompanyDetailPage = () => {
       const data = await companiesService.getCompany(parseInt(id, 10));
       setCompany(data);
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: 'Failed to load company details',
-        severity: 'error',
-      });
+      showError('Failed to load company details');
     } finally {
       setLoading(false);
     }
@@ -163,22 +154,17 @@ export const CompanyDetailPage = () => {
       return;
     }
 
+    setSavingBankDetails(true);
     try {
       // Always use POST for create/update
       await propertiesService.createBankDetails(parseInt(id, 10), bankDetailsForm);
-      setSnackbar({
-        open: true,
-        message: bankDetails ? 'Bank details updated successfully' : 'Bank details created successfully',
-        severity: 'success',
-      });
+      showSuccess(bankDetails ? 'Bank details updated successfully' : 'Bank details created successfully');
       setBankDetailsDialogOpen(false);
       loadBankDetails();
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: 'Failed to save bank details',
-        severity: 'error',
-      });
+      showError('Failed to save bank details');
+    } finally {
+      setSavingBankDetails(false);
     }
   };
 
@@ -191,17 +177,9 @@ export const CompanyDetailPage = () => {
       try {
         await propertiesService.deleteBankDetails(parseInt(id, 10));
         setBankDetails(null);
-        setSnackbar({
-          open: true,
-          message: 'Bank details archived successfully',
-          severity: 'success',
-        });
+        showSuccess('Bank details archived successfully');
       } catch (error) {
-        setSnackbar({
-          open: true,
-          message: 'Failed to archive bank details',
-          severity: 'error',
-        });
+        showError('Failed to archive bank details');
       }
     }
   };
@@ -826,6 +804,7 @@ export const CompanyDetailPage = () => {
                           accountNumber: '',
                           bankAddress: '',
                         })}
+                        disabled={savingBankDetails}
                       >
                         Clear
                       </Button>
@@ -833,9 +812,9 @@ export const CompanyDetailPage = () => {
                         variant="contained"
                         size="small"
                         onClick={handleSaveBankDetails}
-                        disabled={!bankDetailsForm.accountHolderName || !bankDetailsForm.bankName || !bankDetailsForm.sortCode || !bankDetailsForm.accountNumber || !bankDetailsForm.bankAddress}
+                        disabled={savingBankDetails || !bankDetailsForm.accountHolderName || !bankDetailsForm.bankName || !bankDetailsForm.sortCode || !bankDetailsForm.accountNumber || !bankDetailsForm.bankAddress}
                       >
-                        Create Bank Details
+                        {savingBankDetails ? 'Creating...' : 'Create Bank Details'}
                       </Button>
                     </Box>
                   </Box>
@@ -968,44 +947,26 @@ export const CompanyDetailPage = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseBankDetailsDialog}>Cancel</Button>
+          <Button onClick={handleCloseBankDetailsDialog} disabled={savingBankDetails}>Cancel</Button>
           <Button onClick={async () => {
             if (!id) return;
+            setSavingBankDetails(true);
             try {
               await propertiesService.updateBankDetails(parseInt(id, 10), bankDetailsForm);
-              setSnackbar({
-                open: true,
-                message: 'Bank details updated successfully',
-                severity: 'success',
-              });
+              showSuccess('Bank details updated successfully');
               setBankDetailsDialogOpen(false);
               loadBankDetails();
             } catch (error) {
-              setSnackbar({
-                open: true,
-                message: 'Failed to update bank details',
-                severity: 'error',
-              });
+              showError('Failed to update bank details');
+            } finally {
+              setSavingBankDetails(false);
             }
-          }} variant="contained">
-            Update
+          }} variant="contained" disabled={savingBankDetails}>
+            {savingBankDetails ? 'Updating...' : 'Update'}
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Container>
   );
 };

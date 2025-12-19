@@ -26,6 +26,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
   IconButton,
   ToggleButton,
@@ -157,6 +158,15 @@ export const CompanyPropertiesPage = () => {
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [selectedPropertyForDocument, setSelectedPropertyForDocument] = useState<Property | null>(null);
   const [documentUploading, setDocumentUploading] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [propertyToArchive, setPropertyToArchive] = useState<Property | null>(null);
+  const [archiving, setArchiving] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState({
+    propertyName: false,
+    propertyAddress: false,
+    propertyType: false,
+  });
   const [formData, setFormData] = useState<CreatePropertyPayload>({
     propertyName: '',
     propertyAddress: '',
@@ -174,6 +184,12 @@ export const CompanyPropertiesPage = () => {
     propertyId: 0,
     companyId: parseInt(id || '0'),
     files: [] as File[],
+  });
+  const [documentFormErrors, setDocumentFormErrors] = useState({
+    documentName: false,
+    documentType: false,
+    documentSubType: false,
+    files: false,
   });
 
   const loadCompany = async () => {
@@ -225,6 +241,11 @@ export const CompanyPropertiesPage = () => {
       rentalIncomePerAnnum: 0,
       companyId: parseInt(id || '0'),
     });
+    setFormErrors({
+      propertyName: false,
+      propertyAddress: false,
+      propertyType: false,
+    });
     setDialogOpen(true);
   };
 
@@ -239,22 +260,50 @@ export const CompanyPropertiesPage = () => {
       rentalIncomePerAnnum: property.rentalIncomePerAnnum,
       companyId: property.company.id!,
     });
+    setFormErrors({
+      propertyName: false,
+      propertyAddress: false,
+      propertyType: false,
+    });
     setDialogOpen(true);
   };
 
-  const handleArchive = async (propertyId: number) => {
-    if (window.confirm('Are you sure you want to archive this property?')) {
-      try {
-        await propertiesService.archiveProperty(propertyId);
-        showSnackbar('Property archived successfully', 'success');
-        loadProperties();
-      } catch (err) {
-        showSnackbar('Failed to archive property', 'error');
-      }
+  const handleArchive = (property: Property) => {
+    setPropertyToArchive(property);
+    setArchiveDialogOpen(true);
+  };
+
+  const handleConfirmArchive = async () => {
+    if (!propertyToArchive) return;
+    setArchiving(true);
+    try {
+      await propertiesService.archiveProperty(propertyToArchive.id);
+      showSnackbar('Property archived successfully', 'success');
+      setArchiveDialogOpen(false);
+      setPropertyToArchive(null);
+      loadProperties();
+    } catch (err) {
+      showSnackbar('Failed to archive property', 'error');
+    } finally {
+      setArchiving(false);
     }
   };
 
   const handleSave = async () => {
+    // Validation
+    const errors = {
+      propertyName: !formData.propertyName.trim(),
+      propertyAddress: !formData.propertyAddress.trim(),
+      propertyType: !formData.propertyType.trim(),
+    };
+    setFormErrors(errors);
+
+    if (Object.values(errors).some(Boolean)) {
+      showSnackbar('Please fill in all required fields.', 'error');
+      return;
+    }
+
+    setSaving(true);
     try {
       if (editingProperty) {
         await propertiesService.updateProperty(editingProperty.id, formData);
@@ -267,6 +316,8 @@ export const CompanyPropertiesPage = () => {
       loadProperties();
     } catch (err) {
       showSnackbar('Failed to save property', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -283,6 +334,12 @@ export const CompanyPropertiesPage = () => {
       propertyId: property.id,
       companyId: parseInt(id || '0'),
       files: [],
+    });
+    setDocumentFormErrors({
+      documentName: false,
+      documentType: false,
+      documentSubType: false,
+      files: false,
     });
     setDocumentDialogOpen(true);
   };
@@ -303,20 +360,16 @@ export const CompanyPropertiesPage = () => {
   const handleSaveDocument = async () => {
     if (!selectedPropertyForDocument) return;
 
-    if (!documentForm.documentName.trim()) {
-      showSnackbar('Document name is required', 'error');
-      return;
-    }
-    if (!documentForm.documentType.trim()) {
-      showSnackbar('Document type is required', 'error');
-      return;
-    }
-    if (documentForm.documentType === 'Purchase' && !documentForm.documentSubType) {
-      showSnackbar('Please select a sub-type for Purchase', 'error');
-      return;
-    }
-    if (documentForm.files.length === 0) {
-      showSnackbar('Please select files to upload', 'error');
+    // Validation
+    const errors = {
+      documentName: !documentForm.documentName.trim(),
+      documentType: !documentForm.documentType.trim(),
+      documentSubType: documentForm.documentType === 'Purchase' && !documentForm.documentSubType,
+      files: documentForm.files.length === 0,
+    };
+    setDocumentFormErrors(errors);
+
+    if (Object.values(errors).some(Boolean)) {
       return;
     }
 
@@ -700,18 +753,26 @@ export const CompanyPropertiesPage = () => {
                     <TableCell>{property.propertyType}</TableCell>
                     <TableCell>{formatCurrency(property.propertyValue)}</TableCell>
                     <TableCell>
-                      <IconButton onClick={() => navigate(`/companies/${id}/properties/${property.id}`)}>
-                        <Visibility />
-                      </IconButton>
-                      <IconButton onClick={() => handleOpenDocumentDialog(property)}>
-                        <CloudUpload />
-                      </IconButton>
-                      <IconButton onClick={() => handleEdit(property)}>
-                        <Edit />
-                      </IconButton>
-                      <IconButton onClick={() => handleArchive(property.id)}>
-                        <Archive />
-                      </IconButton>
+                      <Tooltip title="View Property Details">
+                        <IconButton onClick={() => navigate(`/companies/${id}/properties/${property.id}`)}>
+                          <Visibility />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Upload Document">
+                        <IconButton onClick={() => handleOpenDocumentDialog(property)}>
+                          <CloudUpload />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Edit Property">
+                        <IconButton onClick={() => handleEdit(property)}>
+                          <Edit />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Archive Property">
+                        <IconButton onClick={() => handleArchive(property)}>
+                          <Archive />
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -777,15 +838,21 @@ export const CompanyPropertiesPage = () => {
                   >
                     View
                   </Button>
-                  <IconButton size="small" onClick={() => handleOpenDocumentDialog(property)}>
-                    <CloudUpload />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => handleEdit(property)}>
-                    <Edit />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => handleArchive(property.id)}>
-                    <Archive />
-                  </IconButton>
+                  <Tooltip title="Upload Document">
+                    <IconButton size="small" onClick={() => handleOpenDocumentDialog(property)}>
+                      <CloudUpload />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Edit Property">
+                    <IconButton size="small" onClick={() => handleEdit(property)}>
+                      <Edit />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Archive Property">
+                    <IconButton size="small" onClick={() => handleArchive(property)}>
+                      <Archive />
+                    </IconButton>
+                  </Tooltip>
                 </Box>
               </Card>
             ))}
@@ -804,12 +871,18 @@ export const CompanyPropertiesPage = () => {
               value={formData.propertyName}
               onChange={(e) => setFormData({ ...formData, propertyName: e.target.value })}
               fullWidth
+              required
+              error={formErrors.propertyName}
+              helperText={formErrors.propertyName ? "* required" : ""}
             />
             <TextField
               label="Property Address"
               value={formData.propertyAddress}
               onChange={(e) => setFormData({ ...formData, propertyAddress: e.target.value })}
               fullWidth
+              required
+              error={formErrors.propertyAddress}
+              helperText={formErrors.propertyAddress ? "* required" : ""}
             />
             <TextField
               label="Description"
@@ -824,6 +897,9 @@ export const CompanyPropertiesPage = () => {
               value={formData.propertyType}
               onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
               fullWidth
+              required
+              error={formErrors.propertyType}
+              helperText={formErrors.propertyType ? "* required" : ""}
             />
             <TextField
               label="Property Value"
@@ -842,9 +918,9 @@ export const CompanyPropertiesPage = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSave} variant="contained">
-            {editingProperty ? 'Update' : 'Create'}
+          <Button onClick={handleCloseDialog} disabled={saving}>Cancel</Button>
+          <Button onClick={handleSave} variant="contained" disabled={saving}>
+            {saving ? 'Saving...' : editingProperty ? 'Update' : 'Create'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -862,6 +938,8 @@ export const CompanyPropertiesPage = () => {
               onChange={(e) => setDocumentForm((prev) => ({ ...prev, documentName: e.target.value }))}
               fullWidth
               required
+              error={documentFormErrors.documentName}
+              helperText={documentFormErrors.documentName ? "* required" : ""}
             />
             <TextField
               select
@@ -877,6 +955,8 @@ export const CompanyPropertiesPage = () => {
               }}
               fullWidth
               required
+              error={documentFormErrors.documentType}
+              helperText={documentFormErrors.documentType ? "* required" : ""}
             >
               {PROPERTY_DOCUMENT_TYPES.map((type) => (
                 <MenuItem key={type} value={type}>
@@ -892,6 +972,8 @@ export const CompanyPropertiesPage = () => {
                 onChange={(e) => setDocumentForm((prev) => ({ ...prev, documentSubType: e.target.value }))}
                 fullWidth
                 required
+                error={documentFormErrors.documentSubType}
+                helperText={documentFormErrors.documentSubType ? "* required" : ""}
               >
                 {PURCHASE_SUB_TYPES.map((subType) => (
                   <MenuItem key={subType} value={subType}>
@@ -936,6 +1018,24 @@ export const CompanyPropertiesPage = () => {
             }}
           >
             {documentUploading ? 'Uploading...' : 'Upload Documents'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Archive Confirmation Dialog */}
+      <Dialog open={archiveDialogOpen} onClose={() => setArchiveDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Archive Property</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to archive the property "{propertyToArchive?.propertyName}"? This action can be undone by restoring it from the archived properties.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setArchiveDialogOpen(false)} disabled={archiving}>
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmArchive} variant="contained" color="error" disabled={archiving}>
+            {archiving ? 'Archiving...' : 'Archive'}
           </Button>
         </DialogActions>
       </Dialog>

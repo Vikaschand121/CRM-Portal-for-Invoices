@@ -263,7 +263,7 @@ export const TwoFactorPage = () => {
                       },
                     }}
                   >
-                    {loading ? <CircularProgress size={24} color="inherit" /> : 'Verify & Continue'}
+                    {loading ? 'Verifying...' : 'Verify & Continue'}
                   </Button>
                 </form>
 

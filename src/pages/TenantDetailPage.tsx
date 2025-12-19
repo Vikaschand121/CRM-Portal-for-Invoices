@@ -25,6 +25,7 @@ import {
   DialogTitle,
   TextField,
   MenuItem,
+  Tooltip,
 } from '@mui/material';
 import {
   Add,
@@ -144,6 +145,42 @@ export const TenantDetailPage = () => {
     creditNoteAmount: '',
     description: '',
   });
+  const [savingPayment, setSavingPayment] = useState(false);
+  const [savingCreditNote, setSavingCreditNote] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [uploadingPaymentDocument, setUploadingPaymentDocument] = useState(false);
+  const [uploadingCreditNoteDocument, setUploadingCreditNoteDocument] = useState(false);
+  const [archivePaymentDialogOpen, setArchivePaymentDialogOpen] = useState(false);
+  const [paymentToArchive, setPaymentToArchive] = useState<Payment | null>(null);
+  const [archivingPayment, setArchivingPayment] = useState(false);
+  const [archiveCreditNoteDialogOpen, setArchiveCreditNoteDialogOpen] = useState(false);
+  const [creditNoteToArchive, setCreditNoteToArchive] = useState<CreditNote | null>(null);
+  const [archivingCreditNote, setArchivingCreditNote] = useState(false);
+  const [documentFormErrors, setDocumentFormErrors] = useState({
+    documentName: false,
+    documentType: false,
+    file: false,
+  });
+  const [paymentDocumentFormErrors, setPaymentDocumentFormErrors] = useState({
+    documentName: false,
+    documentType: false,
+    file: false,
+  });
+  const [creditNoteDocumentFormErrors, setCreditNoteDocumentFormErrors] = useState({
+    documentName: false,
+    documentType: false,
+    file: false,
+  });
+  const [paymentFormErrors, setPaymentFormErrors] = useState({
+    paymentDate: false,
+    amountReceived: false,
+    paymentMethod: false,
+  });
+  const [creditNoteFormErrors, setCreditNoteFormErrors] = useState({
+    creditNoteDate: false,
+    creditNoteAmount: false,
+    description: false,
+  });
 
   useEffect(() => {
     const loadData = async () => {
@@ -213,6 +250,11 @@ export const TenantDetailPage = () => {
       file: null,
       invoiceId: invoiceId,
     });
+    setDocumentFormErrors({
+      documentName: false,
+      documentType: false,
+      file: false,
+    });
     setDocumentDialogOpen(true);
   };
 
@@ -224,6 +266,11 @@ export const TenantDetailPage = () => {
       documentSubType: '',
       file: null,
       paymentDetailId: paymentId,
+    });
+    setPaymentDocumentFormErrors({
+      documentName: false,
+      documentType: false,
+      file: false,
     });
     setPaymentDocumentDialogOpen(true);
   };
@@ -237,6 +284,11 @@ export const TenantDetailPage = () => {
       file: null,
       creditNoteId: creditNoteId,
     });
+    setCreditNoteDocumentFormErrors({
+      documentName: false,
+      documentType: false,
+      file: false,
+    });
     setCreditNoteDocumentDialogOpen(true);
   };
 
@@ -247,6 +299,11 @@ export const TenantDetailPage = () => {
       paymentDate: '',
       amountReceived: '',
       paymentMethod: '',
+    });
+    setPaymentFormErrors({
+      paymentDate: false,
+      amountReceived: false,
+      paymentMethod: false,
     });
     setPaymentDialogOpen(true);
   };
@@ -260,6 +317,11 @@ export const TenantDetailPage = () => {
       amountReceived: payment.amountReceived,
       paymentMethod: payment.paymentMethod,
     });
+    setPaymentFormErrors({
+      paymentDate: false,
+      amountReceived: false,
+      paymentMethod: false,
+    });
     setPaymentDialogOpen(true);
   };
 
@@ -270,6 +332,11 @@ export const TenantDetailPage = () => {
       creditNoteDate: '',
       creditNoteAmount: '',
       description: '',
+    });
+    setCreditNoteFormErrors({
+      creditNoteDate: false,
+      creditNoteAmount: false,
+      description: false,
     });
     setCreditNoteDialogOpen(true);
   };
@@ -283,6 +350,11 @@ export const TenantDetailPage = () => {
       creditNoteAmount: creditNote.creditNoteAmount,
       description: creditNote.description,
     });
+    setCreditNoteFormErrors({
+      creditNoteDate: false,
+      creditNoteAmount: false,
+      description: false,
+    });
     setCreditNoteDialogOpen(true);
   };
 
@@ -294,123 +366,141 @@ export const TenantDetailPage = () => {
     navigate(`/credit-notes/${creditNoteId}`);
   };
 
-  const handleArchivePayment = async (paymentId: number) => {
-    if (!tenantId) return;
-    if (window.confirm('Are you sure you want to archive this payment?')) {
-      try {
-        await propertiesService.archivePayment(paymentId);
-        showSnackbar('Payment archived successfully', 'success');
-        const parsedTenantId = parseInt(tenantId, 10);
-        const paymentData = await propertiesService.getPaymentDetails(parsedTenantId);
-        setPayments(paymentData);
-      } catch (err) {
-        showSnackbar('Failed to archive payment', 'error');
-      }
+  const handleArchivePayment = (payment: Payment) => {
+    setPaymentToArchive(payment);
+    setArchivePaymentDialogOpen(true);
+  };
+
+  const handleConfirmArchivePayment = async () => {
+    if (!paymentToArchive || !tenantId) return;
+    setArchivingPayment(true);
+    try {
+      await propertiesService.archivePayment(paymentToArchive.id);
+      showSnackbar('Payment archived successfully', 'success');
+      setArchivePaymentDialogOpen(false);
+      setPaymentToArchive(null);
+      const parsedTenantId = parseInt(tenantId, 10);
+      const paymentData = await propertiesService.getPaymentDetails(parsedTenantId);
+      setPayments(paymentData);
+    } catch (err) {
+      showSnackbar('Failed to archive payment', 'error');
+    } finally {
+      setArchivingPayment(false);
     }
   };
 
-  const handleArchiveCreditNote = async (creditNoteId: number) => {
-    if (!tenantId) return;
-    if (window.confirm('Are you sure you want to archive this credit note?')) {
-      try {
-        await propertiesService.archiveCreditNote(creditNoteId);
-        showSnackbar('Credit note archived successfully', 'success');
-        const parsedTenantId = parseInt(tenantId, 10);
-        const creditNoteData = await propertiesService.getCreditNotes(parsedTenantId);
-        setCreditNotes(creditNoteData);
-      } catch (err) {
-        showSnackbar('Failed to archive credit note', 'error');
-      }
+  const handleArchiveCreditNote = (creditNote: CreditNote) => {
+    setCreditNoteToArchive(creditNote);
+    setArchiveCreditNoteDialogOpen(true);
+  };
+
+  const handleConfirmArchiveCreditNote = async () => {
+    if (!creditNoteToArchive || !tenantId) return;
+    setArchivingCreditNote(true);
+    try {
+      await propertiesService.archiveCreditNote(creditNoteToArchive.id);
+      showSnackbar('Credit note archived successfully', 'success');
+      setArchiveCreditNoteDialogOpen(false);
+      setCreditNoteToArchive(null);
+      const parsedTenantId = parseInt(tenantId, 10);
+      const creditNoteData = await propertiesService.getCreditNotes(parsedTenantId);
+      setCreditNotes(creditNoteData);
+    } catch (err) {
+      showSnackbar('Failed to archive credit note', 'error');
+    } finally {
+      setArchivingCreditNote(false);
     }
   };
 
   const handleSaveDocument = async () => {
     // Validation
-    if (!documentForm.documentName.trim()) {
-      showSnackbar('Document name is required', 'error');
-      return;
-    }
-    if (!documentForm.documentType.trim()) {
-      showSnackbar('Document type is required', 'error');
-      return;
-    }
-    if (!documentForm.file) {
-      showSnackbar('Please select a file to upload', 'error');
+    const errors = {
+      documentName: !documentForm.documentName.trim(),
+      documentType: !documentForm.documentType.trim(),
+      file: !documentForm.file,
+    };
+    setDocumentFormErrors(errors);
+
+    if (Object.values(errors).some(Boolean)) {
       return;
     }
 
+    setUploadingDocument(true);
     try {
       await documentsService.createDocument(documentForm);
       showSnackbar('Document uploaded successfully', 'success');
       setDocumentDialogOpen(false);
     } catch (err) {
       showSnackbar('Failed to upload document', 'error');
+    } finally {
+      setUploadingDocument(false);
     }
   };
 
   const handleSavePaymentDocument = async () => {
     // Validation
-    if (!paymentDocumentForm.documentName.trim()) {
-      showSnackbar('Document name is required', 'error');
-      return;
-    }
-    if (!paymentDocumentForm.documentType.trim()) {
-      showSnackbar('Document type is required', 'error');
-      return;
-    }
-    if (!paymentDocumentForm.file) {
-      showSnackbar('Please select a file to upload', 'error');
+    const errors = {
+      documentName: !paymentDocumentForm.documentName.trim(),
+      documentType: !paymentDocumentForm.documentType.trim(),
+      file: !paymentDocumentForm.file,
+    };
+    setPaymentDocumentFormErrors(errors);
+
+    if (Object.values(errors).some(Boolean)) {
       return;
     }
 
+    setUploadingPaymentDocument(true);
     try {
       await documentsService.createDocument(paymentDocumentForm);
       showSnackbar('Document uploaded successfully', 'success');
       setPaymentDocumentDialogOpen(false);
     } catch (err) {
       showSnackbar('Failed to upload document', 'error');
+    } finally {
+      setUploadingPaymentDocument(false);
     }
   };
 
   const handleSaveCreditNoteDocument = async () => {
     // Validation
-    if (!creditNoteDocumentForm.documentName.trim()) {
-      showSnackbar('Document name is required', 'error');
-      return;
-    }
-    if (!creditNoteDocumentForm.documentType.trim()) {
-      showSnackbar('Document type is required', 'error');
-      return;
-    }
-    if (!creditNoteDocumentForm.file) {
-      showSnackbar('Please select a file to upload', 'error');
+    const errors = {
+      documentName: !creditNoteDocumentForm.documentName.trim(),
+      documentType: !creditNoteDocumentForm.documentType.trim(),
+      file: !creditNoteDocumentForm.file,
+    };
+    setCreditNoteDocumentFormErrors(errors);
+
+    if (Object.values(errors).some(Boolean)) {
       return;
     }
 
+    setUploadingCreditNoteDocument(true);
     try {
       await documentsService.createDocument(creditNoteDocumentForm);
       showSnackbar('Document uploaded successfully', 'success');
       setCreditNoteDocumentDialogOpen(false);
     } catch (err) {
       showSnackbar('Failed to upload document', 'error');
+    } finally {
+      setUploadingCreditNoteDocument(false);
     }
   };
 
   const handleSavePayment = async () => {
     // Validation
-    if (!paymentForm.paymentDate.trim()) {
-      showSnackbar('Payment date is required', 'error');
-      return;
-    }
-    if (!paymentForm.amountReceived.trim()) {
-      showSnackbar('Amount received is required', 'error');
-      return;
-    }
-    if (!paymentForm.paymentMethod.trim()) {
-      showSnackbar('Payment method is required', 'error');
+    const errors = {
+      paymentDate: !paymentForm.paymentDate.trim(),
+      amountReceived: !paymentForm.amountReceived.trim(),
+      paymentMethod: !paymentForm.paymentMethod.trim(),
+    };
+    setPaymentFormErrors(errors);
+
+    if (Object.values(errors).some(Boolean)) {
       return;
     }
 
+    setSavingPayment(true);
     try {
       if (selectedPaymentId) {
         await propertiesService.updatePayment(selectedPaymentId, paymentForm);
@@ -429,24 +519,25 @@ export const TenantDetailPage = () => {
       }
     } catch (err) {
       showSnackbar('Failed to save payment', 'error');
+    } finally {
+      setSavingPayment(false);
     }
   };
 
   const handleSaveCreditNote = async () => {
     // Validation
-    if (!creditNoteForm.creditNoteDate.trim()) {
-      showSnackbar('Credit note date is required', 'error');
-      return;
-    }
-    if (!creditNoteForm.creditNoteAmount.trim()) {
-      showSnackbar('Credit note amount is required', 'error');
-      return;
-    }
-    if (!creditNoteForm.description.trim()) {
-      showSnackbar('Description is required', 'error');
+    const errors = {
+      creditNoteDate: !creditNoteForm.creditNoteDate.trim(),
+      creditNoteAmount: !creditNoteForm.creditNoteAmount.trim(),
+      description: !creditNoteForm.description.trim(),
+    };
+    setCreditNoteFormErrors(errors);
+
+    if (Object.values(errors).some(Boolean)) {
       return;
     }
 
+    setSavingCreditNote(true);
     try {
       if (selectedCreditNoteId) {
         await propertiesService.updateCreditNote(selectedCreditNoteId, creditNoteForm);
@@ -465,6 +556,8 @@ export const TenantDetailPage = () => {
       }
     } catch (err) {
       showSnackbar('Failed to save credit note', 'error');
+    } finally {
+      setSavingCreditNote(false);
     }
   };
 
@@ -835,24 +928,36 @@ export const TenantDetailPage = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      <IconButton onClick={() => handleViewInvoice(invoice.id)} sx={{ color: 'primary.main' }}>
-                        <Visibility />
-                      </IconButton>
-                      <IconButton onClick={() => handleEditInvoice(invoice.id)} sx={{ color: 'secondary.main' }}>
-                        <Edit />
-                      </IconButton>
-                      <IconButton onClick={() => handleAddPayment(invoice)} sx={{ color: 'success.main' }}>
-                        <PaymentIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleAddCreditNote(invoice)} sx={{ color: 'error.main' }}>
-                        <CreditNoteIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleUploadInvoiceDocument(invoice.id)} sx={{ color: 'info.main' }}>
-                        <CloudUpload />
-                      </IconButton>
-                      <IconButton onClick={() => handleArchiveInvoice(invoice.id)} sx={{ color: 'warning.main' }}>
-                        <Archive />
-                      </IconButton>
+                      <Tooltip title="View Invoice">
+                        <IconButton onClick={() => handleViewInvoice(invoice.id)} sx={{ color: 'primary.main' }}>
+                          <Visibility />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Edit Invoice">
+                        <IconButton onClick={() => handleEditInvoice(invoice.id)} sx={{ color: 'secondary.main' }}>
+                          <Edit />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Add Payment">
+                        <IconButton onClick={() => handleAddPayment(invoice)} sx={{ color: 'success.main' }}>
+                          <PaymentIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Add Credit Note">
+                        <IconButton onClick={() => handleAddCreditNote(invoice)} sx={{ color: 'error.main' }}>
+                          <CreditNoteIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Upload Document">
+                        <IconButton onClick={() => handleUploadInvoiceDocument(invoice.id)} sx={{ color: 'info.main' }}>
+                          <CloudUpload />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Archive Invoice">
+                        <IconButton onClick={() => handleArchiveInvoice(invoice.id)} sx={{ color: 'warning.main' }}>
+                          <Archive />
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -892,18 +997,26 @@ export const TenantDetailPage = () => {
                     <TableCell>{formatCurrency(parseFloat(payment.amountReceived))}</TableCell>
                     <TableCell>{payment.paymentMethod}</TableCell>
                     <TableCell>
-                      <IconButton onClick={() => handleViewPayment(payment.id)} sx={{ color: 'primary.main' }}>
-                        <Visibility />
-                      </IconButton>
-                      <IconButton onClick={() => handleEditPayment(payment)} sx={{ color: 'secondary.main' }}>
-                        <Edit />
-                      </IconButton>
-                      <IconButton onClick={() => handleUploadPaymentDocument(payment.id)} sx={{ color: 'info.main' }}>
-                        <CloudUpload />
-                      </IconButton>
-                      <IconButton onClick={() => handleArchivePayment(payment.id)} sx={{ color: 'warning.main' }}>
-                        <Archive />
-                      </IconButton>
+                      <Tooltip title="View Payment">
+                        <IconButton onClick={() => handleViewPayment(payment.id)} sx={{ color: 'primary.main' }}>
+                          <Visibility />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Edit Payment">
+                        <IconButton onClick={() => handleEditPayment(payment)} sx={{ color: 'secondary.main' }}>
+                          <Edit />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Upload Document">
+                        <IconButton onClick={() => handleUploadPaymentDocument(payment.id)} sx={{ color: 'info.main' }}>
+                          <CloudUpload />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Archive Payment">
+                        <IconButton onClick={() => handleArchivePayment(payment)} sx={{ color: 'warning.main' }}>
+                          <Archive />
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -943,18 +1056,26 @@ export const TenantDetailPage = () => {
                     <TableCell>{formatCurrency(parseFloat(creditNote.creditNoteAmount))}</TableCell>
                     <TableCell>{creditNote.description}</TableCell>
                     <TableCell>
-                      <IconButton onClick={() => handleViewCreditNote(creditNote.id)} sx={{ color: 'primary.main' }}>
-                        <Visibility />
-                      </IconButton>
-                      <IconButton onClick={() => handleEditCreditNote(creditNote)} sx={{ color: 'secondary.main' }}>
-                        <Edit />
-                      </IconButton>
-                      <IconButton onClick={() => handleUploadCreditNoteDocument(creditNote.id)} sx={{ color: 'info.main' }}>
-                        <CloudUpload />
-                      </IconButton>
-                      <IconButton onClick={() => handleArchiveCreditNote(creditNote.id)} sx={{ color: 'warning.main' }}>
-                        <Archive />
-                      </IconButton>
+                      <Tooltip title="View Credit Note">
+                        <IconButton onClick={() => handleViewCreditNote(creditNote.id)} sx={{ color: 'primary.main' }}>
+                          <Visibility />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Edit Credit Note">
+                        <IconButton onClick={() => handleEditCreditNote(creditNote)} sx={{ color: 'secondary.main' }}>
+                          <Edit />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Upload Document">
+                        <IconButton onClick={() => handleUploadCreditNoteDocument(creditNote.id)} sx={{ color: 'info.main' }}>
+                          <CloudUpload />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Archive Credit Note">
+                        <IconButton onClick={() => handleArchiveCreditNote(creditNote)} sx={{ color: 'warning.main' }}>
+                          <Archive />
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -974,6 +1095,8 @@ export const TenantDetailPage = () => {
                 onChange={(e) => setDocumentForm({ ...documentForm, documentName: e.target.value })}
                 fullWidth
                 required
+                error={documentFormErrors.documentName}
+                helperText={documentFormErrors.documentName ? "* required" : ""}
               />
               <TextField
                 select
@@ -982,6 +1105,8 @@ export const TenantDetailPage = () => {
                 onChange={(e) => setDocumentForm({ ...documentForm, documentType: e.target.value })}
                 fullWidth
                 required
+                error={documentFormErrors.documentType}
+                helperText={documentFormErrors.documentType ? "* required" : ""}
               >
                 {INVOICE_DOCUMENT_TYPES.map((type) => (
                   <MenuItem key={type} value={type}>
@@ -996,9 +1121,9 @@ export const TenantDetailPage = () => {
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setDocumentDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveDocument} variant="contained">
-              Upload
+            <Button onClick={() => setDocumentDialogOpen(false)} disabled={uploadingDocument}>Cancel</Button>
+            <Button onClick={handleSaveDocument} variant="contained" disabled={uploadingDocument}>
+              {uploadingDocument ? 'Uploading...' : 'Upload'}
             </Button>
           </DialogActions>
         </Dialog>
@@ -1028,6 +1153,8 @@ export const TenantDetailPage = () => {
                 onChange={(e) => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })}
                 fullWidth
                 required
+                error={paymentFormErrors.paymentDate}
+                helperText={paymentFormErrors.paymentDate ? "* required" : ""}
                 InputLabelProps={{ shrink: true }}
               />
               <TextField
@@ -1036,6 +1163,8 @@ export const TenantDetailPage = () => {
                 onChange={(e) => setPaymentForm({ ...paymentForm, amountReceived: e.target.value })}
                 fullWidth
                 required
+                error={paymentFormErrors.amountReceived}
+                helperText={paymentFormErrors.amountReceived ? "* required" : ""}
               />
               <TextField
                 select
@@ -1044,6 +1173,8 @@ export const TenantDetailPage = () => {
                 onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}
                 fullWidth
                 required
+                error={paymentFormErrors.paymentMethod}
+                helperText={paymentFormErrors.paymentMethod ? "* required" : ""}
               >
                 <MenuItem value="Cash">Cash</MenuItem>
                 <MenuItem value="PayPal">PayPal</MenuItem>
@@ -1052,9 +1183,9 @@ export const TenantDetailPage = () => {
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setPaymentDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSavePayment} variant="contained">
-              {selectedPaymentId ? 'Update' : 'Create'}
+            <Button onClick={() => setPaymentDialogOpen(false)} disabled={savingPayment}>Cancel</Button>
+            <Button onClick={handleSavePayment} variant="contained" disabled={savingPayment}>
+              {savingPayment ? 'Saving...' : selectedPaymentId ? 'Update' : 'Create'}
             </Button>
           </DialogActions>
         </Dialog>
@@ -1085,6 +1216,8 @@ export const TenantDetailPage = () => {
                 onChange={(e) => setCreditNoteForm({ ...creditNoteForm, creditNoteDate: e.target.value })}
                 fullWidth
                 required
+                error={creditNoteFormErrors.creditNoteDate}
+                helperText={creditNoteFormErrors.creditNoteDate ? "* required" : ""}
                 InputLabelProps={{ shrink: true }}
               />
               <TextField
@@ -1093,6 +1226,8 @@ export const TenantDetailPage = () => {
                 onChange={(e) => setCreditNoteForm({ ...creditNoteForm, creditNoteAmount: e.target.value })}
                 fullWidth
                 required
+                error={creditNoteFormErrors.creditNoteAmount}
+                helperText={creditNoteFormErrors.creditNoteAmount ? "* required" : ""}
               />
               <TextField
                 label="Description"
@@ -1100,15 +1235,17 @@ export const TenantDetailPage = () => {
                 onChange={(e) => setCreditNoteForm({ ...creditNoteForm, description: e.target.value })}
                 fullWidth
                 required
+                error={creditNoteFormErrors.description}
+                helperText={creditNoteFormErrors.description ? "* required" : ""}
                 multiline
                 rows={3}
               />
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setCreditNoteDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveCreditNote} variant="contained">
-              {selectedCreditNoteId ? 'Update' : 'Create'}
+            <Button onClick={() => setCreditNoteDialogOpen(false)} disabled={savingCreditNote}>Cancel</Button>
+            <Button onClick={handleSaveCreditNote} variant="contained" disabled={savingCreditNote}>
+              {savingCreditNote ? 'Saving...' : selectedCreditNoteId ? 'Update' : 'Create'}
             </Button>
           </DialogActions>
         </Dialog>
@@ -1124,6 +1261,8 @@ export const TenantDetailPage = () => {
                 onChange={(e) => setPaymentDocumentForm({ ...paymentDocumentForm, documentName: e.target.value })}
                 fullWidth
                 required
+                error={paymentDocumentFormErrors.documentName}
+                helperText={paymentDocumentFormErrors.documentName ? "* required" : ""}
               />
               <TextField
                 select
@@ -1132,6 +1271,8 @@ export const TenantDetailPage = () => {
                 onChange={(e) => setPaymentDocumentForm({ ...paymentDocumentForm, documentType: e.target.value })}
                 fullWidth
                 required
+                error={paymentDocumentFormErrors.documentType}
+                helperText={paymentDocumentFormErrors.documentType ? "* required" : ""}
               >
                 <MenuItem value="Receipts">Receipts</MenuItem>
                 <MenuItem value="Bank statements">Bank statements</MenuItem>
@@ -1145,9 +1286,9 @@ export const TenantDetailPage = () => {
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setPaymentDocumentDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSavePaymentDocument} variant="contained">
-              Upload
+            <Button onClick={() => setPaymentDocumentDialogOpen(false)} disabled={uploadingPaymentDocument}>Cancel</Button>
+            <Button onClick={handleSavePaymentDocument} variant="contained" disabled={uploadingPaymentDocument}>
+              {uploadingPaymentDocument ? 'Uploading...' : 'Upload'}
             </Button>
           </DialogActions>
         </Dialog>
@@ -1163,6 +1304,8 @@ export const TenantDetailPage = () => {
                 onChange={(e) => setCreditNoteDocumentForm({ ...creditNoteDocumentForm, documentName: e.target.value })}
                 fullWidth
                 required
+                error={creditNoteDocumentFormErrors.documentName}
+                helperText={creditNoteDocumentFormErrors.documentName ? "* required" : ""}
               />
               <TextField
                 select
@@ -1171,6 +1314,8 @@ export const TenantDetailPage = () => {
                 onChange={(e) => setCreditNoteDocumentForm({ ...creditNoteDocumentForm, documentType: e.target.value })}
                 fullWidth
                 required
+                error={creditNoteDocumentFormErrors.documentType}
+                helperText={creditNoteDocumentFormErrors.documentType ? "* required" : ""}
               >
                 <MenuItem value="Credit notes">Credit notes</MenuItem>
                 <MenuItem value="Adjustment letters">Adjustment letters</MenuItem>
@@ -1184,9 +1329,45 @@ export const TenantDetailPage = () => {
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setCreditNoteDocumentDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveCreditNoteDocument} variant="contained">
-              Upload
+            <Button onClick={() => setCreditNoteDocumentDialogOpen(false)} disabled={uploadingCreditNoteDocument}>Cancel</Button>
+            <Button onClick={handleSaveCreditNoteDocument} variant="contained" disabled={uploadingCreditNoteDocument}>
+              {uploadingCreditNoteDocument ? 'Uploading...' : 'Upload'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Archive Payment Dialog */}
+        <Dialog open={archivePaymentDialogOpen} onClose={() => setArchivePaymentDialogOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Archive Payment</DialogTitle>
+          <DialogContent>
+            <Typography>
+              Are you sure you want to archive this payment? This action can be undone by restoring it from the archived payments.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setArchivePaymentDialogOpen(false)} disabled={archivingPayment}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmArchivePayment} variant="contained" color="error" disabled={archivingPayment}>
+              {archivingPayment ? 'Archiving...' : 'Archive'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Archive Credit Note Dialog */}
+        <Dialog open={archiveCreditNoteDialogOpen} onClose={() => setArchiveCreditNoteDialogOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Archive Credit Note</DialogTitle>
+          <DialogContent>
+            <Typography>
+              Are you sure you want to archive this credit note? This action can be undone by restoring it from the archived credit notes.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setArchiveCreditNoteDialogOpen(false)} disabled={archivingCreditNote}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmArchiveCreditNote} variant="contained" color="error" disabled={archivingCreditNote}>
+              {archivingCreditNote ? 'Archiving...' : 'Archive'}
             </Button>
           </DialogActions>
         </Dialog>
