@@ -40,7 +40,6 @@ import {
   CloudUpload,
   Payment as PaymentIcon,
   Receipt as CreditNoteIcon,
-  Delete,
 } from '@mui/icons-material';
 import { Tenant, Invoice, CreateDocumentPayload, Payment, CreatePaymentPayload, UpdatePaymentPayload, CreditNote, CreateCreditNotePayload, UpdateCreditNotePayload } from '../types';
 import { tenantsService } from '../services/tenants.service';
@@ -143,11 +142,12 @@ export const TenantDetailPage = () => {
         setError(null);
         const tenantData = await tenantsService.getTenant(parseInt(tenantId));
         setTenant(tenantData);
-        const invoiceData = await invoicesService.getInvoicesByTenant(parseInt(tenantId));
+        const parsedTenantId = parseInt(tenantId, 10);
+        const invoiceData = await invoicesService.getInvoicesByTenant(parsedTenantId);
         setInvoices(invoiceData);
-        const paymentData = await propertiesService.getPaymentDetails();
+        const paymentData = await propertiesService.getPaymentDetails(parsedTenantId);
         setPayments(paymentData);
-        const creditNoteData = await propertiesService.getCreditNotes();
+        const creditNoteData = await propertiesService.getCreditNotes(parsedTenantId);
         setCreditNotes(creditNoteData);
       } catch (err) {
         setError('Failed to load tenant data');
@@ -254,30 +254,32 @@ export const TenantDetailPage = () => {
     navigate(`/credit-notes/${creditNoteId}`);
   };
 
-  const handleDeletePayment = async (paymentId: number) => {
-    if (window.confirm('Are you sure you want to delete this payment?')) {
+  const handleArchivePayment = async (paymentId: number) => {
+    if (!tenantId) return;
+    if (window.confirm('Are you sure you want to archive this payment?')) {
       try {
-        await propertiesService.deletePayment(paymentId);
-        showSnackbar('Payment deleted successfully', 'success');
-        // Refresh payments
-        const paymentData = await propertiesService.getPaymentDetails();
+        await propertiesService.archivePayment(paymentId);
+        showSnackbar('Payment archived successfully', 'success');
+        const parsedTenantId = parseInt(tenantId, 10);
+        const paymentData = await propertiesService.getPaymentDetails(parsedTenantId);
         setPayments(paymentData);
       } catch (err) {
-        showSnackbar('Failed to delete payment', 'error');
+        showSnackbar('Failed to archive payment', 'error');
       }
     }
   };
 
-  const handleDeleteCreditNote = async (creditNoteId: number) => {
-    if (window.confirm('Are you sure you want to delete this credit note?')) {
+  const handleArchiveCreditNote = async (creditNoteId: number) => {
+    if (!tenantId) return;
+    if (window.confirm('Are you sure you want to archive this credit note?')) {
       try {
-        await propertiesService.deleteCreditNote(creditNoteId);
-        showSnackbar('Credit note deleted successfully', 'success');
-        // Refresh credit notes
-        const creditNoteData = await propertiesService.getCreditNotes();
+        await propertiesService.archiveCreditNote(creditNoteId);
+        showSnackbar('Credit note archived successfully', 'success');
+        const parsedTenantId = parseInt(tenantId, 10);
+        const creditNoteData = await propertiesService.getCreditNotes(parsedTenantId);
         setCreditNotes(creditNoteData);
       } catch (err) {
-        showSnackbar('Failed to delete credit note', 'error');
+        showSnackbar('Failed to archive credit note', 'error');
       }
     }
   };
@@ -332,8 +334,11 @@ export const TenantDetailPage = () => {
       setPaymentDialogOpen(false);
       setSelectedPaymentId(null);
       // Refresh payments
-      const paymentData = await propertiesService.getPaymentDetails();
-      setPayments(paymentData);
+      if (tenantId) {
+        const parsedTenantId = parseInt(tenantId, 10);
+        const paymentData = await propertiesService.getPaymentDetails(parsedTenantId);
+        setPayments(paymentData);
+      }
     } catch (err) {
       showSnackbar('Failed to save payment', 'error');
     }
@@ -365,8 +370,11 @@ export const TenantDetailPage = () => {
       setCreditNoteDialogOpen(false);
       setSelectedCreditNoteId(null);
       // Refresh credit notes
-      const creditNoteData = await propertiesService.getCreditNotes();
-      setCreditNotes(creditNoteData);
+      if (tenantId) {
+        const parsedTenantId = parseInt(tenantId, 10);
+        const creditNoteData = await propertiesService.getCreditNotes(parsedTenantId);
+        setCreditNotes(creditNoteData);
+      }
     } catch (err) {
       showSnackbar('Failed to save credit note', 'error');
     }
@@ -769,6 +777,13 @@ export const TenantDetailPage = () => {
         <Box sx={{ mt: 4 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Payments</Typography>
+            <Button
+              variant="text"
+              startIcon={<Archive />}
+              onClick={() => navigate('/payments/archived', { state: { fromTenant: tenant?.id } })}
+            >
+              View Archived
+            </Button>
           </Box>
           <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
             <Table>
@@ -795,8 +810,8 @@ export const TenantDetailPage = () => {
                       <IconButton onClick={() => handleEditPayment(payment)} sx={{ color: 'secondary.main' }}>
                         <Edit />
                       </IconButton>
-                      <IconButton onClick={() => handleDeletePayment(payment.id)} sx={{ color: 'error.main' }}>
-                        <Delete />
+                      <IconButton onClick={() => handleArchivePayment(payment.id)} sx={{ color: 'warning.main' }}>
+                        <Archive />
                       </IconButton>
                     </TableCell>
                   </TableRow>
@@ -810,6 +825,13 @@ export const TenantDetailPage = () => {
         <Box sx={{ mt: 4 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Credit Notes</Typography>
+            <Button
+              variant="text"
+              startIcon={<Archive />}
+              onClick={() => navigate('/credit-notes/archived', { state: { fromTenant: tenant?.id } })}
+            >
+              View Archived
+            </Button>
           </Box>
           <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
             <Table>
@@ -836,8 +858,8 @@ export const TenantDetailPage = () => {
                       <IconButton onClick={() => handleEditCreditNote(creditNote)} sx={{ color: 'secondary.main' }}>
                         <Edit />
                       </IconButton>
-                      <IconButton onClick={() => handleDeleteCreditNote(creditNote.id)} sx={{ color: 'error.main' }}>
-                        <Delete />
+                      <IconButton onClick={() => handleArchiveCreditNote(creditNote.id)} sx={{ color: 'warning.main' }}>
+                        <Archive />
                       </IconButton>
                     </TableCell>
                   </TableRow>

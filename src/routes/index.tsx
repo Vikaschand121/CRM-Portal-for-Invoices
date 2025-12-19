@@ -23,6 +23,8 @@ import { ArchivedPropertiesPage } from '../pages/ArchivedPropertiesPage';
 import { ArchivedTenantsPage } from '../pages/ArchivedTenantsPage';
 import { ArchivedInvoicesPage } from '../pages/ArchivedInvoicesPage';
 import { ArchivedDocumentsPage } from '../pages/ArchivedDocumentsPage';
+import { ArchivedPaymentsPage } from '../pages/ArchivedPaymentsPage';
+import { ArchivedCreditNotesPage } from '../pages/ArchivedCreditNotesPage';
 import { PropertyDetailPage } from '../pages/PropertyDetailPage';
 import { DocumentViewerPage } from '../pages/DocumentViewerPage';
 import { UsersPage } from '../pages/UsersPage';
@@ -109,6 +111,8 @@ export const AppRoutes = () => {
         <Route path="tenants/archived" element={<ArchivedTenantsPage />} />
         <Route path="invoices/archived" element={<ArchivedInvoicesPage />} />
         <Route path="documents/archived" element={<ArchivedDocumentsPage />} />
+        <Route path="payments/archived" element={<ArchivedPaymentsPage />} />
+        <Route path="credit-notes/archived" element={<ArchivedCreditNotesPage />} />
         <Route path="companies/:companyId/properties/:propertyId/invoices/new" element={<InvoiceCreatePage />} />
         <Route path="companies/:companyId/properties/:propertyId/invoices/:invoiceId" element={<InvoiceViewPage />} />
         <Route path="companies/:companyId/properties/:propertyId/invoices/:invoiceId/edit" element={<InvoiceEditPage />} />

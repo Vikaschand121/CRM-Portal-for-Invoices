@@ -46,8 +46,8 @@ class PropertiesService {
     return api.delete<void>(`/property-management/companies/${companyId}/bank-details`);
   }
 
-  async getPaymentDetails(): Promise<Payment[]> {
-    return api.get<Payment[]>('/property-management/payment-details');
+  async getPaymentDetails(tenantId: number): Promise<Payment[]> {
+    return api.get<Payment[]>(`/property-management/payment-details/tenant/${tenantId}`);
   }
 
   async createPayment(payload: CreatePaymentPayload): Promise<Payment> {
@@ -66,8 +66,20 @@ class PropertiesService {
     return api.delete<void>(`/property-management/payment-details/${id}`);
   }
 
-  async getCreditNotes(): Promise<CreditNote[]> {
-    return api.get<CreditNote[]>('/property-management/credit-notes');
+  async archivePayment(id: number): Promise<void> {
+    return api.patch<void>(`/property-management/payment-details/archive/${id}`, { isArchived: true });
+  }
+
+  async restorePayment(id: number): Promise<void> {
+    return api.patch<void>(`/property-management/payment-details/archive/${id}`, { isArchived: false });
+  }
+
+  async getArchivedPayments(): Promise<Payment[]> {
+    return api.get<Payment[]>('/property-management/payment-details/archived');
+  }
+
+  async getCreditNotes(tenantId: number): Promise<CreditNote[]> {
+    return api.get<CreditNote[]>(`/property-management/credit-notes/tenant/${tenantId}`);
   }
 
   async createCreditNote(payload: CreateCreditNotePayload): Promise<CreditNote> {
@@ -84,6 +96,18 @@ class PropertiesService {
 
   async deleteCreditNote(id: number): Promise<void> {
     return api.delete<void>(`/property-management/credit-notes/${id}`);
+  }
+
+  async archiveCreditNote(id: number): Promise<void> {
+    return api.patch<void>(`/property-management/credit-notes/archive/${id}`, { isArchived: true });
+  }
+
+  async restoreCreditNote(id: number): Promise<void> {
+    return api.patch<void>(`/property-management/credit-notes/archive/${id}`, { isArchived: false });
+  }
+
+  async getArchivedCreditNotes(): Promise<CreditNote[]> {
+    return api.get<CreditNote[]>('/property-management/credit-notes/archived');
   }
 }
 
