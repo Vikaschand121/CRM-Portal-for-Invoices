@@ -148,6 +148,26 @@ export interface Task {
   date: string; // ISO date string
   description?: string;
   priority?: 'low' | 'medium' | 'high';
+  isArchived?: boolean;
+}
+
+export interface CreateTaskPayload {
+  title: string;
+  date: string;
+  priority: 'Low' | 'Medium' | 'High';
+  description?: string;
+  isArchived?: boolean;
+}
+
+export interface CreateMeetingPayload {
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  companyId: string;
+  attendees: string[];
+  description?: string;
+  isArchived?: boolean;
 }
 
 export interface Meeting {

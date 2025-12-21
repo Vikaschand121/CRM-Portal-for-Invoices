@@ -1,5 +1,5 @@
 import { api } from './api';
-import { Property, CreatePropertyPayload, UpdatePropertyPayload, BankDetails, CreateBankDetailsPayload, UpdateBankDetailsPayload, Payment, CreatePaymentPayload, UpdatePaymentPayload, CreditNote, CreateCreditNotePayload, UpdateCreditNotePayload } from '../types';
+import { Property, CreatePropertyPayload, UpdatePropertyPayload, BankDetails, CreateBankDetailsPayload, UpdateBankDetailsPayload, Payment, CreatePaymentPayload, UpdatePaymentPayload, CreditNote, CreateCreditNotePayload, UpdateCreditNotePayload, Task, CreateTaskPayload, CalendarEvent, CreateMeetingPayload } from '../types';
 
 class PropertiesService {
   async getProperties(): Promise<Property[]> {
@@ -108,6 +108,34 @@ class PropertiesService {
 
   async getArchivedCreditNotes(): Promise<CreditNote[]> {
     return api.get<CreditNote[]>('/property-management/credit-notes/archived');
+  }
+
+  async createTask(payload: CreateTaskPayload): Promise<Task> {
+    return api.post<Task>('/property-management/tasks', payload);
+  }
+
+  async updateTask(id: string, payload: Partial<CreateTaskPayload>): Promise<Task> {
+    return api.patch<Task>(`/property-management/tasks/${id}`, payload);
+  }
+
+  async deleteTask(id: string): Promise<void> {
+    return api.delete<void>(`/property-management/tasks/${id}`);
+  }
+
+  async createMeeting(payload: CreateMeetingPayload): Promise<any> {
+    return api.post<any>('/property-management/meetings', payload);
+  }
+
+  async updateMeeting(id: string, payload: Partial<CreateMeetingPayload>): Promise<any> {
+    return api.patch<any>(`/property-management/meetings/${id}`, payload);
+  }
+
+  async deleteMeeting(id: string): Promise<void> {
+    return api.delete<void>(`/property-management/meetings/${id}`);
+  }
+
+  async getEvents(): Promise<CalendarEvent[]> {
+    return api.get<CalendarEvent[]>('/property-management/companies/tasks');
   }
 }
 

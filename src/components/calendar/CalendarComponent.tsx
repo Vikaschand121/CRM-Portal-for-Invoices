@@ -31,138 +31,13 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { CalendarEvent, Task, Meeting, Company, User } from '../../types';
+import { CalendarEvent, Task, Meeting, Company, User, CreateMeetingPayload } from '../../types';
 import { companiesService } from '../../services/companies.service';
 import { usersService } from '../../services/users.service';
+import { propertiesService } from '../../services/properties.service';
 
 interface Event extends CalendarEvent {}
 
-const mockEvents: Event[] = [
-  {
-    id: '1',
-    title: 'Meeting with Supplier ABC',
-    start: '2025-11-03T10:00:00',
-    end: '2025-11-03T11:00:00',
-    description: 'Discuss new order requirements and pricing',
-    extendedProps: { type: 'meeting' }
-  },
-  {
-    id: '2',
-    title: 'Delivery Deadline - Order #12345',
-    start: '2025-11-05T09:00:00',
-    description: 'Critical delivery deadline for electronics shipment',
-    extendedProps: { type: 'task' }
-  },
-  {
-    id: '3',
-    title: 'Quality Check - Batch QC001',
-    start: '2025-11-07T14:00:00',
-    end: '2025-11-07T15:00:00',
-    description: 'Inspect incoming materials from supplier XYZ',
-    extendedProps: { type: 'meeting' }
-  },
-  {
-    id: '4',
-    title: 'Vendor Onboarding Call',
-    start: '2025-11-10T15:00:00',
-    end: '2025-11-10T16:00:00',
-    description: 'Welcome call for new vendor registration',
-    extendedProps: { type: 'meeting' }
-  },
-  {
-    id: '5',
-    title: 'Monthly Review Meeting',
-    start: '2025-11-12T11:00:00',
-    end: '2025-11-12T12:00:00',
-    description: 'Review supplier performance metrics',
-    extendedProps: { type: 'meeting' }
-  },
-  {
-    id: '6',
-    title: 'Contract Renewal Deadline',
-    start: '2025-11-15T17:00:00',
-    description: 'Renewal deadline for supplier contract #789',
-    extendedProps: { type: 'task' }
-  },
-  {
-    id: '7',
-    title: 'Audit Preparation',
-    start: '2025-11-18T09:00:00',
-    end: '2025-11-18T12:00:00',
-    description: 'Prepare documentation for quarterly audit',
-    extendedProps: { type: 'meeting' }
-  },
-  {
-    id: '8',
-    title: 'Supplier Training Session',
-    start: '2025-11-20T13:00:00',
-    end: '2025-11-20T15:00:00',
-    description: 'Training on new quality standards',
-    extendedProps: { type: 'meeting' }
-  },
-  {
-    id: '9',
-    title: 'Payment Due Date',
-    start: '2025-11-22T08:00:00',
-    description: 'Payment due for invoice #INV-2024-001',
-    extendedProps: { type: 'task' }
-  },
-  {
-    id: '10',
-    title: 'Emergency Maintenance',
-    start: '2025-11-25T10:00:00',
-    end: '2025-11-25T11:00:00',
-    description: 'Scheduled maintenance for production line',
-    extendedProps: { type: 'meeting' }
-  },
-  {
-    id: '11',
-    title: 'Supplier Visit',
-    start: '2025-11-28T14:00:00',
-    end: '2025-11-28T16:00:00',
-    description: 'On-site visit to supplier facility',
-    extendedProps: { type: 'meeting' }
-  },
-  {
-    id: '12',
-    title: 'Year-End Review',
-    start: '2025-11-30T09:00:00',
-    end: '2025-11-30T12:00:00',
-    description: 'Annual supplier performance review',
-    extendedProps: { type: 'meeting' }
-  },
-  // Additional events for the same day (2025-11-03)
-  {
-    id: '13',
-    title: 'Team Standup Meeting',
-    start: '2025-11-03T09:00:00',
-    end: '2025-11-03T09:30:00',
-    description: 'Daily team standup to discuss progress',
-    extendedProps: { type: 'meeting' }
-  },
-  {
-    id: '14',
-    title: 'Client Presentation',
-    start: '2025-11-03T14:00:00',
-    end: '2025-11-03T15:30:00',
-    description: 'Present quarterly results to client',
-    extendedProps: { type: 'meeting' }
-  },
-  {
-    id: '15',
-    title: 'Review Project Documentation',
-    start: '2025-11-03T11:00:00',
-    description: 'Update and review project documentation',
-    extendedProps: { type: 'task' }
-  },
-  {
-    id: '16',
-    title: 'Submit Monthly Report',
-    start: '2025-11-03T16:00:00',
-    description: 'Compile and submit monthly performance report',
-    extendedProps: { type: 'task' }
-  }
-];
 
 interface CalendarComponentRef {
   openCreateTaskDialog: () => void;
@@ -178,17 +53,19 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
   const [editEventOpen, setEditEventOpen] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [events, setEvents] = useState<Event[]>(mockEvents);
-  const [filteredEvents, setFilteredEvents] = useState<Event[]>(mockEvents);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [filterStartDate, setFilterStartDate] = useState<Date | null>(null);
   const [filterEndDate, setFilterEndDate] = useState<Date | null>(null);
+  const [creatingTask, setCreatingTask] = useState(false);
+  const [creatingMeeting, setCreatingMeeting] = useState(false);
 
   // Form states
   const [taskForm, setTaskForm] = useState({
     title: '',
     date: null as Date | null,
     description: '',
-    priority: 'medium' as 'low' | 'medium' | 'high'
+    priority: 'Medium' as 'Low' | 'Medium' | 'High'
   });
 
   const [meetingForm, setMeetingForm] = useState({
@@ -209,16 +86,32 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
     openCreateMeetingDialog: () => setCreateMeetingOpen(true)
   }));
 
-  // Fetch companies and users on component mount
+  // Fetch companies, users, and events on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [companiesData, usersData] = await Promise.all([
+        const [companiesData, usersData, eventsData] = await Promise.all([
           companiesService.getCompanies(),
-          usersService.getUsers()
+          usersService.getUsers(),
+          propertiesService.getEvents()
         ]);
         setCompanies(companiesData);
         setUsers(usersData);
+
+        // Map events data to match CalendarEvent interface
+        const mappedEvents: Event[] = eventsData.map(event => ({
+          ...event,
+          extendedProps: {
+            type: event.extendedProps!.type,
+            priority: event.extendedProps?.priority?.toLowerCase() as 'low' | 'medium' | 'high',
+            companyId: (event as any).companyId ? parseInt((event as any).companyId) : undefined,
+            userIds: (event as any).attendees ? (event as any).attendees.map((id: string) => parseInt(id)) : [],
+            attendees: (event as any).attendees || []
+          }
+        }));
+
+        setEvents(mappedEvents);
+        setFilteredEvents(mappedEvents);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -233,6 +126,12 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
     const eventsOnDate = events.filter(event => {
       const eventDate = new Date(event.start).toDateString();
       return eventDate === clickedDate.toDateString();
+    }).sort((a, b) => {
+      // Sort by type first: tasks before meetings
+      if (a.extendedProps?.type === 'task' && b.extendedProps?.type === 'meeting') return -1;
+      if (a.extendedProps?.type === 'meeting' && b.extendedProps?.type === 'task') return 1;
+      // Then by start time
+      return new Date(a.start).getTime() - new Date(b.start).getTime();
     });
 
     setEventsForDate(eventsOnDate);
@@ -296,7 +195,7 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
         title: event.title,
         date: new Date(event.start),
         description: event.description || '',
-        priority: event.extendedProps?.priority || 'medium'
+        priority: ((event.extendedProps?.priority as string)?.charAt(0).toUpperCase() + (event.extendedProps?.priority as string)?.slice(1) || 'Medium') as 'Low' | 'Medium' | 'High'
       });
       setCreateTaskOpen(true);
     } else if (event.extendedProps?.type === 'meeting') {
@@ -316,85 +215,148 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
     setOpen(false);
   };
 
-  const handleDeleteEvent = (event: Event) => {
+  const handleDeleteEvent = async (event: Event) => {
     if (window.confirm(`Are you sure you want to delete "${event.title}"?`)) {
-      setEvents(prev => prev.filter(e => e.id !== event.id));
-      setOpen(false);
+      try {
+        if (event.extendedProps?.type === 'task') {
+          await propertiesService.deleteTask(event.id);
+        } else if (event.extendedProps?.type === 'meeting') {
+          await propertiesService.deleteMeeting(event.id);
+        }
+        setEvents(prev => prev.filter(e => e.id !== event.id));
+        setOpen(false);
+      } catch (error) {
+        console.error('Error deleting event:', error);
+        // Handle error
+      }
     }
   };
 
-  const handleCreateTask = () => {
+  const handleCreateTask = async () => {
     if (!taskForm.title || !taskForm.date) return;
 
-    const newTask: Event = {
-      id: editingEvent ? editingEvent.id : Date.now().toString(),
-      title: taskForm.title,
-      start: taskForm.date.toISOString().split('T')[0] + 'T00:00:00',
-      description: taskForm.description,
-      extendedProps: {
-        type: 'task',
-        priority: taskForm.priority
+    setCreatingTask(true);
+    try {
+      const payload = {
+        title: taskForm.title,
+        date: taskForm.date.toISOString(),
+        priority: taskForm.priority,
+        description: taskForm.description,
+        isArchived: false
+      };
+
+      let updatedTask: Task;
+      if (editingEvent && editingEvent.extendedProps?.type === 'task') {
+        updatedTask = await propertiesService.updateTask(editingEvent.id, payload);
+      } else {
+        updatedTask = await propertiesService.createTask(payload);
       }
-    };
 
-    if (editingEvent) {
-      setEvents(prev => prev.map(e => e.id === editingEvent.id ? newTask : e));
-    } else {
-      setEvents(prev => [...prev, newTask]);
+      const newEvent: Event = {
+        id: updatedTask.id,
+        title: updatedTask.title,
+        start: updatedTask.date,
+        description: updatedTask.description,
+        extendedProps: {
+          type: 'task',
+          priority: updatedTask.priority?.toLowerCase() as 'low' | 'medium' | 'high'
+        }
+      };
+
+      if (editingEvent) {
+        setEvents(prev => prev.map(e => e.id === editingEvent.id ? newEvent : e));
+      } else {
+        setEvents(prev => [...prev, newEvent]);
+      }
+
+      setCreateTaskOpen(false);
+      setEditingEvent(null);
+      setTaskForm({
+        title: '',
+        date: null,
+        description: '',
+        priority: 'Medium'
+      });
+    } catch (error) {
+      console.error('Error saving task:', error);
+      // Handle error, maybe show snackbar
+    } finally {
+      setCreatingTask(false);
     }
-
-    setCreateTaskOpen(false);
-    setEditingEvent(null);
-    setTaskForm({
-      title: '',
-      date: null,
-      description: '',
-      priority: 'medium'
-    });
   };
 
-  const handleCreateMeeting = () => {
+  const handleCreateMeeting = async () => {
     if (!meetingForm.title || !meetingForm.date || !meetingForm.startTime || !meetingForm.endTime) return;
 
-    const startDateTime = new Date(meetingForm.date);
-    const startTime = new Date(meetingForm.startTime);
-    const endTime = new Date(meetingForm.endTime);
+    setCreatingMeeting(true);
+    try {
+      const dateStr = meetingForm.date.toISOString().split('T')[0];
+      const startTimeStr = meetingForm.startTime.toTimeString().split(' ')[0];
+      const endTimeStr = meetingForm.endTime.toTimeString().split(' ')[0];
 
-    startDateTime.setHours(startTime.getHours(), startTime.getMinutes());
-    const endDateTime = new Date(startDateTime);
-    endDateTime.setHours(endTime.getHours(), endTime.getMinutes());
+      const payload: CreateMeetingPayload = {
+        title: meetingForm.title,
+        date: dateStr,
+        startTime: startTimeStr,
+        endTime: endTimeStr,
+        companyId: meetingForm.companyId,
+        attendees: meetingForm.userIds.map(id => id.toString()),
+        description: meetingForm.description,
+        isArchived: false
+      };
 
-    const newMeeting: Event = {
-      id: editingEvent ? editingEvent.id : Date.now().toString(),
-      title: meetingForm.title,
-      start: startDateTime.toISOString(),
-      end: endDateTime.toISOString(),
-      description: meetingForm.description,
-      extendedProps: {
-        type: 'meeting',
-        companyId: meetingForm.companyId ? parseInt(meetingForm.companyId) : undefined,
-        userIds: meetingForm.userIds,
-        attendees: users.filter(u => meetingForm.userIds.includes(u.id)).map(u => u.name || `${u.first_name} ${u.last_name}`)
+      let updatedMeeting: any;
+      if (editingEvent && editingEvent.extendedProps?.type === 'meeting') {
+        updatedMeeting = await propertiesService.updateMeeting(editingEvent.id, payload);
+      } else {
+        updatedMeeting = await propertiesService.createMeeting(payload);
       }
-    };
 
-    if (editingEvent) {
-      setEvents(prev => prev.map(e => e.id === editingEvent.id ? newMeeting : e));
-    } else {
-      setEvents(prev => [...prev, newMeeting]);
+      const startDateTime = new Date(meetingForm.date);
+      const startTime = new Date(meetingForm.startTime);
+      const endTime = new Date(meetingForm.endTime);
+
+      startDateTime.setHours(startTime.getHours(), startTime.getMinutes());
+      const endDateTime = new Date(startDateTime);
+      endDateTime.setHours(endTime.getHours(), endTime.getMinutes());
+
+      const newMeeting: Event = {
+        id: updatedMeeting.id || editingEvent?.id || Date.now().toString(),
+        title: meetingForm.title,
+        start: startDateTime.toISOString(),
+        end: endDateTime.toISOString(),
+        description: meetingForm.description,
+        extendedProps: {
+          type: 'meeting',
+          companyId: meetingForm.companyId ? parseInt(meetingForm.companyId) : undefined,
+          userIds: meetingForm.userIds,
+          attendees: users.filter(u => meetingForm.userIds.includes(u.id)).map(u => u.name || `${u.first_name} ${u.last_name}`)
+        }
+      };
+
+      if (editingEvent) {
+        setEvents(prev => prev.map(e => e.id === editingEvent.id ? newMeeting : e));
+      } else {
+        setEvents(prev => [...prev, newMeeting]);
+      }
+
+      setCreateMeetingOpen(false);
+      setEditingEvent(null);
+      setMeetingForm({
+        title: '',
+        date: null,
+        startTime: null,
+        endTime: null,
+        description: '',
+        companyId: '',
+        userIds: []
+      });
+    } catch (error) {
+      console.error('Error saving meeting:', error);
+      // Handle error
+    } finally {
+      setCreatingMeeting(false);
     }
-
-    setCreateMeetingOpen(false);
-    setEditingEvent(null);
-    setMeetingForm({
-      title: '',
-      date: null,
-      startTime: null,
-      endTime: null,
-      description: '',
-      companyId: '',
-      userIds: []
-    });
   };
 
   return (
@@ -526,11 +488,11 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
                 <InputLabel>Priority</InputLabel>
                 <Select
                   value={taskForm.priority}
-                  onChange={(e) => setTaskForm(prev => ({ ...prev, priority: e.target.value as 'low' | 'medium' | 'high' }))}
+                  onChange={(e) => setTaskForm(prev => ({ ...prev, priority: e.target.value as 'Low' | 'Medium' | 'High' }))}
                 >
-                  <MenuItem value="low">Low</MenuItem>
-                  <MenuItem value="medium">Medium</MenuItem>
-                  <MenuItem value="high">High</MenuItem>
+                  <MenuItem value="Low">Low</MenuItem>
+                  <MenuItem value="Medium">Medium</MenuItem>
+                  <MenuItem value="High">High</MenuItem>
                 </Select>
               </FormControl>
               <TextField
@@ -546,7 +508,9 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCreateTaskOpen(false)}>Cancel</Button>
-          <Button onClick={handleCreateTask} variant="contained">Create</Button>
+          <Button onClick={handleCreateTask} variant="contained" disabled={creatingTask}>
+            {creatingTask ? 'Creating...' : 'Create'}
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -627,7 +591,9 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCreateMeetingOpen(false)}>Cancel</Button>
-          <Button onClick={handleCreateMeeting} variant="contained">Create</Button>
+          <Button onClick={handleCreateMeeting} variant="contained" disabled={creatingMeeting}>
+            {creatingMeeting ? 'Creating...' : 'Create'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
