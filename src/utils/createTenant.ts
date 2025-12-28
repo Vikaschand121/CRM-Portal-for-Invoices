@@ -12,12 +12,14 @@ export const createTenantFromData = async () => {
     isVatRegistered: false,
     rentPaymentFrequency: "MONTHLY",
     aggreedAnnualRent: "25000",
+    netAmount: "15000",
     tenantEmail: "tenant@example.com",
     tenantContact: "+44 1234 567890",
     tenantCorrespondingAddress: "123 Baker Street, London, W1 6XE",
     breakDate: "2028-12-31",
     rentStartDate: "2025-01-01",
-    previousBalance: 1250.5
+    previousBalance: 1250.5,
+    isArchived: false,
   };
 
   try {

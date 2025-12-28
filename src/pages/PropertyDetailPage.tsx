@@ -169,6 +169,7 @@ export const PropertyDetailPage = () => {
     rentStartDate: '',
     aggreedAnnualRent: undefined,
     netAmount: undefined,
+    isArchived: false,
   });
   const [tenantFormErrors, setTenantFormErrors] = useState({
     tenantName: false,
@@ -292,6 +293,7 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
       aggreedAnnualRent: undefined,
       netAmount: undefined,
       previousBalance: undefined,
+      isArchived: false,
     });
     setTenantFormErrors({
       tenantName: false,
@@ -322,6 +324,7 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
       aggreedAnnualRent: tenant.aggreedAnnualRent,
       netAmount: tenant.netAmount,
       previousBalance: tenant.previousBalance,
+      isArchived: tenant.isArchived ?? false,
     });
     setTenantFormErrors({
       tenantName: false,

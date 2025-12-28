@@ -60,6 +60,7 @@ export interface Property {
   propertyType: string;
   propertyValue: number;
   rentalIncomePerAnnum: number;
+  isVat?: boolean;
   company: Company;
   createdAt: string;
   updatedAt: string;
@@ -100,7 +101,7 @@ export interface Company {
   portfolioValue?: number;
   properties?: CompanyProperty[];
   isArchived?: boolean;
-  tenantsPercentage?: string;
+  tenantsPercentage?: string | null;
   accountHolderName?: string;
   bankName?: string;
   sortCode?: string;
@@ -226,6 +227,7 @@ export interface CreateTenantPayload {
   aggreedAnnualRent?: string;
   netAmount?: string;
   previousBalance?: number;
+  isArchived?: boolean;
 }
 
 export interface UpdateTenantPayload extends CreateTenantPayload {}

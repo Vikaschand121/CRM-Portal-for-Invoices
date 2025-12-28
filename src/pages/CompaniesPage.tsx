@@ -328,10 +328,10 @@ export const CompaniesPage = () => {
       showError('Document type is required');
       return;
     }
-    if (documentForm.documentType === 'Company Confirmation Statement' && !documentForm.documentSubType) {
-      showError('Please select a year for the confirmation statement');
-      return;
-    }
+    // if (documentForm.documentType === 'Company Confirmation Statement' && !documentForm.documentSubType) {
+    //   showError('Please select a year for the confirmation statement');
+    //   return;
+    // }
     if (documentForm.files.length === 0) {
       showError('Please select files to upload');
       return;
@@ -343,7 +343,7 @@ export const CompaniesPage = () => {
         await documentsService.createDocument({
           documentName: documentForm.documentName.trim(),
           documentType: documentForm.documentType,
-          documentSubType: documentForm.documentSubType,
+          // documentSubType: documentForm.documentSubType,
           companyId: selectedCompanyForDocument.id,
           propertyId: undefined,
           file: file,
@@ -748,7 +748,7 @@ export const CompaniesPage = () => {
                   </MenuItem>
                 ))}
               </TextField>
-              {documentForm.documentType === 'Company Confirmation Statement' && (
+              {/* {documentForm.documentType === 'Company Confirmation Statement' && (
                 <TextField
                   select
                   label="Statement Year"
@@ -764,7 +764,7 @@ export const CompaniesPage = () => {
                     </MenuItem>
                   ))}
                 </TextField>
-              )}
+              )} */}
               <TextField
                 label="Document Name"
                 value={documentForm.documentName}
