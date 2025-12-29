@@ -150,6 +150,7 @@ export interface Task {
   description?: string;
   priority?: 'low' | 'medium' | 'high';
   isArchived?: boolean;
+  assignees?: string[];
 }
 
 export interface CreateTaskPayload {
@@ -158,6 +159,7 @@ export interface CreateTaskPayload {
   priority: 'Low' | 'Medium' | 'High';
   description?: string;
   isArchived?: boolean;
+  assignees: string[];
 }
 
 export interface CreateMeetingPayload {
@@ -287,6 +289,7 @@ export interface Invoice {
   vatRate: number;
   totalAmount: number;
   paymentMade: number;
+  creditNoteAmount?: number;
   balanceDue?: string;
   notes: string;
   bankAccountName: string;
@@ -327,6 +330,7 @@ export interface CreateInvoicePayload {
   vatRate: number;
   totalAmount: number;
   paymentMade: number;
+  creditNoteAmount?: number;
   balanceDue?: string;
   notes: string;
   bankAccountName: string;

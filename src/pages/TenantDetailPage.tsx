@@ -176,6 +176,7 @@ export const TenantDetailPage = () => {
     amountReceived: false,
     paymentMethod: false,
   });
+  const [paymentAmountDisabled, setPaymentAmountDisabled] = useState(false);
   const [creditNoteFormErrors, setCreditNoteFormErrors] = useState({
     creditNoteDate: false,
     creditNoteAmount: false,
@@ -293,11 +294,14 @@ export const TenantDetailPage = () => {
   };
 
   const handleAddPayment = (invoice: Invoice) => {
+    const formattedAmount = Number.isFinite(invoice.paymentMade)
+      ? invoice.paymentMade.toString()
+      : invoice.paymentMade?.toString() || '';
     setPaymentForm({
       invoiceId: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
       paymentDate: '',
-      amountReceived: '',
+      amountReceived: formattedAmount,
       paymentMethod: '',
     });
     setPaymentFormErrors({
@@ -305,6 +309,7 @@ export const TenantDetailPage = () => {
       amountReceived: false,
       paymentMethod: false,
     });
+    setPaymentAmountDisabled(true);
     setPaymentDialogOpen(true);
   };
 
@@ -322,6 +327,7 @@ export const TenantDetailPage = () => {
       amountReceived: false,
       paymentMethod: false,
     });
+    setPaymentAmountDisabled(false);
     setPaymentDialogOpen(true);
   };
 
@@ -511,6 +517,7 @@ export const TenantDetailPage = () => {
       }
       setPaymentDialogOpen(false);
       setSelectedPaymentId(null);
+      setPaymentAmountDisabled(false);
       // Refresh payments
       if (tenantId) {
         const parsedTenantId = parseInt(tenantId, 10);
@@ -1129,7 +1136,15 @@ export const TenantDetailPage = () => {
         </Dialog>
 
         {/* Payment Dialog */}
-        <Dialog open={paymentDialogOpen} onClose={() => setPaymentDialogOpen(false)} maxWidth="md" fullWidth>
+        <Dialog
+          open={paymentDialogOpen}
+          onClose={() => {
+            setPaymentDialogOpen(false);
+            setPaymentAmountDisabled(false);
+          }}
+          maxWidth="md"
+          fullWidth
+        >
           <DialogTitle>{selectedPaymentId ? 'Edit Payment' : 'Add Payment'}</DialogTitle>
           <DialogContent>
             <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -1161,6 +1176,7 @@ export const TenantDetailPage = () => {
                 label="Amount Received"
                 value={paymentForm.amountReceived}
                 onChange={(e) => setPaymentForm({ ...paymentForm, amountReceived: e.target.value })}
+                disabled={paymentAmountDisabled}
                 fullWidth
                 required
                 error={paymentFormErrors.amountReceived}
@@ -1183,7 +1199,7 @@ export const TenantDetailPage = () => {
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setPaymentDialogOpen(false)} disabled={savingPayment}>Cancel</Button>
+            <Button onClick={() => { setPaymentDialogOpen(false); setPaymentAmountDisabled(false); }} disabled={savingPayment}>Cancel</Button>
             <Button onClick={handleSavePayment} variant="contained" disabled={savingPayment}>
               {savingPayment ? 'Saving...' : selectedPaymentId ? 'Update' : 'Create'}
             </Button>

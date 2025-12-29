@@ -95,6 +95,7 @@ export interface InvoicePreviewProps {
   company?: Company | null;
   tenant?: Tenant | null;
   bankDetails?: Partial<BankDetails> | null;
+  creditNoteAmount?: number;
 }
 
 export const InvoicePreview = ({
@@ -120,16 +121,20 @@ export const InvoicePreview = ({
   company,
   tenant,
   bankDetails,
+  creditNoteAmount = 0,
 }: InvoicePreviewProps) => {
   const safeNet = Number.isFinite(netAmount) ? netAmount : 0;
   const safeVat = Number.isFinite(vatAmount) ? vatAmount : safeNet * (vatRate || 0);
   const safeTotal = Number.isFinite(totalAmount) ? totalAmount : safeNet + safeVat;
   const safePreviousBalance = Number.isFinite(previousBalance) ? previousBalance : 0;
   const safePaymentMade = Number.isFinite(paymentMade) ? paymentMade : 0;
+  const parsedCreditNoteAmount = Number(creditNoteAmount ?? 0);
+  const safeCreditNoteAmount = Number.isFinite(parsedCreditNoteAmount) ? parsedCreditNoteAmount : 0;
   const computedBalance = safePreviousBalance + safeTotal - safePaymentMade;
+  const computedBalanceWithCredit = computedBalance - safeCreditNoteAmount;
   const safeBalanceDue = balanceDue !== undefined && balanceDue !== null && !Number.isNaN(Number(balanceDue))
     ? Number(balanceDue)
-    : computedBalance;
+    : computedBalanceWithCredit;
 
   const periodLabel = `${formatDate(rentalPeriodStart)} to ${formatDate(rentalPeriodEnd)}`;
   const notesSummary = notes?.trim() || 'No notes provided.';
@@ -311,6 +316,9 @@ export const InvoicePreview = ({
           <SummaryRow label="Sub Total" value={formatCurrency(safeNet)} />
           <SummaryRow label="Total" value={formatCurrency(safeTotal)} bold />
           <SummaryRow label="Payment Made" value={formatCurrency(-safePaymentMade)} negative />
+          {safeCreditNoteAmount > 0 && (
+            <SummaryRow label="Credit Note Amount" value={formatCurrency(-safeCreditNoteAmount)} negative />
+          )}
           <SummaryRow label="Balance Due" value={formatCurrency(safeBalanceDue)} bold highlight />
         </Box>
       </Box>

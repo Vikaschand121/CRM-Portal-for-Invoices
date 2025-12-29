@@ -47,6 +47,7 @@ interface InvoiceFormState {
   notes: string;
   billToName: string;
   billToAddress: string;
+  creditNoteAmount: number;
 }
 
 const INVOICE_TYPES: { value: InvoiceType; label: string }[] = [
@@ -161,6 +162,7 @@ const buildInitialForm = (propertyId: number, companyId: number | null, tenantId
     notes: '',
     billToName: '',
     billToAddress: '',
+    creditNoteAmount: 0,
   };
 };
 
@@ -171,6 +173,33 @@ const parseCurrencyValue = (value?: string | number): number => {
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
 };
+
+const NOTE_DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+};
+
+const NOTE_CURRENCY_FORMATTER = new Intl.NumberFormat('en-GB', {
+  style: 'currency',
+  currency: 'GBP',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const formatNoteCurrency = (value: number): string => {
+  if (!Number.isFinite(value)) return NOTE_CURRENCY_FORMATTER.format(0);
+  return NOTE_CURRENCY_FORMATTER.format(value);
+};
+
+const formatNoteDate = (value?: string): string => {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString('en-GB', NOTE_DATE_FORMAT_OPTIONS);
+};
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 const buildTenantDerivedPatch = (
   tenant: Tenant,
@@ -230,6 +259,46 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const buildFirstInvoiceNote = (tenant: Tenant, formState: InvoiceFormState, invoicesList: Invoice[]): string | null => {
+    if (!formState.tenantId || Number(formState.tenantId) !== tenant.id) {
+      return null;
+    }
+
+    const existingForTenant = invoicesList.some((invoice) => invoice.tenantId === tenant.id);
+    if (existingForTenant) {
+      return null;
+    }
+
+    const startValue = formState.rentalPeriodStart;
+    const endValue = formState.rentalPeriodEnd;
+    if (!startValue || !endValue) {
+      return null;
+    }
+
+    const startDate = new Date(startValue);
+    const endDate = new Date(endValue);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      return null;
+    }
+
+    const diffMs = endDate.getTime() - startDate.getTime();
+    const diffDays = Math.floor(diffMs / MS_PER_DAY) + 1;
+    const defaultDays = formState.billingFrequency === 'quarterly' ? 90 : 30;
+    const rentalDays = diffDays > 0 ? diffDays : defaultDays;
+
+    const annualRentValue = parseCurrencyValue(tenant.aggreedAnnualRent);
+    if (!Number.isFinite(annualRentValue) || annualRentValue <= 0) {
+      return null;
+    }
+
+    const dailyRate = annualRentValue / 365;
+    const rentDue = dailyRate * rentalDays;
+
+    return `${rentalDays} days between ${formatNoteDate(startValue)} to ${formatNoteDate(endValue)}. Rent per day is ${formatNoteCurrency(annualRentValue)}/365 = ${formatNoteCurrency(
+      dailyRate
+    )}. Rent due for ${rentalDays} days is ${formatNoteCurrency(dailyRate)} * ${rentalDays} = ${formatNoteCurrency(rentDue)}.`;
+  };
 
   const currentTenant = useMemo(
     () => tenants.find((tenant) => tenant.id.toString() === form?.tenantId),
@@ -294,12 +363,10 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             notes: target.notes,
             billToName: target.billToName,
             billToAddress: target.billToAddress,
+            creditNoteAmount: target.creditNoteAmount ?? 0,
           });
           if (!(target as any).notes) {
-            setTimeout(() => {
-              const notes = generateNotes();
-              updateForm({ notes });
-            }, 500);
+            updateForm({ notes: DEFAULT_LEASE_REMINDER_TEXT });
           }
         } else {
           const tenantIdFromState = location.state?.tenantId;
@@ -319,6 +386,10 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
                 ...formWithTenant,
                 ...buildTenantDerivedPatch(matchingTenant, formWithTenant, invoiceList, foundProperty.propertyAddress),
               };
+              const firstInvoiceNotes = buildFirstInvoiceNote(matchingTenant, formWithTenant, invoiceList);
+              if (firstInvoiceNotes) {
+                formWithTenant = { ...formWithTenant, notes: firstInvoiceNotes };
+              }
             }
           }
           setForm(formWithTenant);
@@ -346,18 +417,14 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
     setForm((prev) => {
       if (!prev) return prev;
       const patch = buildTenantDerivedPatch(tenant, prev, existingInvoices, property?.propertyAddress);
-      return { ...prev, ...patch };
+      const updatedForm = { ...prev, ...patch };
+      const firstInvoiceNotes = buildFirstInvoiceNote(tenant, updatedForm, existingInvoices);
+      if (firstInvoiceNotes) {
+        updatedForm.notes = firstInvoiceNotes;
+      }
+      return updatedForm;
     });
-    setTimeout(() => handleRentalPeriodChange(), 100);
   };
-
-  const handleRentalPeriodChange = () => {
-    if (!form || !property) return;
-    const notes = generateNotes();
-    updateForm({ notes });
-  };
-
-  const generateNotes = () => DEFAULT_LEASE_REMINDER_TEXT;
 
   const resolveInvoiceType = (invoiceType: InvoiceType): string => {
     switch (invoiceType) {
@@ -399,9 +466,10 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
 
       const previousBalanceValue = currentTenant?.previousBalance ?? 0;
       const paymentMadeValue = form.paymentMade ?? 0;
-      const calculatedBalance = form.balanceDue !== undefined && form.balanceDue !== null && form.balanceDue !== ''
-        ? Number(form.balanceDue)
-        : previousBalanceValue + form.totalAmount - paymentMadeValue;
+      const creditNoteAmountValue = Number.isFinite(Number(form.creditNoteAmount ?? 0)) ? Number(form.creditNoteAmount ?? 0) : 0;
+      const hasManualBalance = form.balanceDue !== undefined && form.balanceDue !== null && form.balanceDue !== '';
+      const autoBalance = previousBalanceValue + form.totalAmount - paymentMadeValue - creditNoteAmountValue;
+      const calculatedBalance = hasManualBalance ? Number(form.balanceDue) : autoBalance;
       const safeBalance = Number.isFinite(calculatedBalance) ? calculatedBalance : 0;
 
       const resolvedInvoiceType = resolveInvoiceType(form.invoiceType);
@@ -435,6 +503,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
         paymentMade: paymentMadeValue,
         balanceDue: safeBalance.toFixed(2),
         notes: form.notes,
+        creditNoteAmount: creditNoteAmountValue,
         bankAccountName: bankDetails?.accountHolderName || '',
         bankName: bankDetails?.bankName || '',
         bankSortCode: bankDetails?.sortCode || '',
@@ -483,16 +552,26 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
   const invoiceTitle = INVOICE_TYPES.find((type) => type.value === form.invoiceType)?.label ?? 'Invoice';
   const previousBalanceValue = currentTenant?.previousBalance ?? 0;
   const paymentMadeValue = form.paymentMade ?? 0;
-  const calculatedBalance = form.balanceDue !== undefined && form.balanceDue !== null && form.balanceDue !== ''
-    ? Number(form.balanceDue)
-    : previousBalanceValue + form.totalAmount - paymentMadeValue;
+  const creditNoteAmountValue = Number.isFinite(Number(form.creditNoteAmount ?? 0)) ? Number(form.creditNoteAmount ?? 0) : 0;
+  const autoBalance = previousBalanceValue + form.totalAmount - paymentMadeValue - creditNoteAmountValue;
+  const hasManualBalance = form.balanceDue !== undefined && form.balanceDue !== null && form.balanceDue !== '';
+  const calculatedBalance = hasManualBalance ? Number(form.balanceDue) : autoBalance;
   const safeBalanceDue = Number.isFinite(calculatedBalance) ? calculatedBalance : 0;
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={2} sx={{ mb: 3 }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}`)}>
-          Back to Property
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={() =>
+            navigate(
+              currentTenant
+                ? `/tenants/${currentTenant.id}`
+                : `/companies/${companyId}/properties/${propertyId}`
+            )
+          }
+        >
+          Back to Invoice
         </Button>
         <Button
           variant="contained"
@@ -622,6 +701,16 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
                 onChange={(e) => updateForm({ paymentMade: Number(e.target.value) || 0 })}
               />
             </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Credit Note Amount"
+                type="number"
+                value={form.creditNoteAmount ?? 0}
+                fullWidth
+                InputProps={{ startAdornment: <InputAdornment position="start">£</InputAdornment> }}
+                onChange={(e) => updateForm({ creditNoteAmount: Number(e.target.value) || 0 })}
+              />
+            </Grid>
             <Grid item xs={12}>
               <TextField
                 label="Notes"
@@ -671,6 +760,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             company={property.company}
             tenant={currentTenant || null}
             bankDetails={bankDetails}
+            creditNoteAmount={creditNoteAmountValue}
           />
         </Paper>
 

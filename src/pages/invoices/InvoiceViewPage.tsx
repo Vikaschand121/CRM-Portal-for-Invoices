@@ -104,14 +104,27 @@ export const InvoiceViewPage = () => {
   }
 
   const previousBalanceValue = tenant?.previousBalance ?? 0;
-  const calculatedBalance = invoice.balanceDue ? Number(invoice.balanceDue) : previousBalanceValue + invoice.totalAmount - invoice.paymentMade;
-  const safeBalanceDue = Number.isFinite(calculatedBalance) ? calculatedBalance : invoice.totalAmount;
+  const creditNoteValue = Number.isFinite(Number(invoice.creditNoteAmount ?? 0)) ? Number(invoice.creditNoteAmount ?? 0) : 0;
+  const baseBalance =
+    invoice.balanceDue && invoice.balanceDue !== ''
+      ? Number(invoice.balanceDue)
+      : previousBalanceValue + invoice.totalAmount - invoice.paymentMade;
+  const safeBalanceDue =
+    Number.isFinite(baseBalance)
+      ? baseBalance - creditNoteValue
+      : invoice.totalAmount - creditNoteValue;
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={2} sx={{ mb: 3 }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}`)}>
-          Back to Property
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={() => {
+            const tenantRoute = invoice?.tenantId ? `/tenants/${invoice.tenantId}` : `/companies/${companyId}/properties/${propertyId}`;
+            navigate(tenantRoute);
+          }}
+        >
+          Back to Invoice
         </Button>
         <Stack direction="row" spacing={1}>
           <Button variant="outlined" startIcon={<Edit />} onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}/invoices/${invoiceId}/edit`)}>
@@ -151,6 +164,7 @@ export const InvoiceViewPage = () => {
         notes={invoice.notes}
         company={property.company}
         tenant={tenant}
+        creditNoteAmount={creditNoteValue}
         bankDetails={{
           accountHolderName: invoice.bankAccountName,
           bankName: invoice.bankName,

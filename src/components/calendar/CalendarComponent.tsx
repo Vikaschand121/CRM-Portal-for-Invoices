@@ -32,6 +32,15 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { CalendarEvent, Task, Meeting, Company, User, CreateMeetingPayload } from '../../types';
+
+const formatUserLabel = (user?: User) => {
+  if (!user) return 'User';
+  if (user.name?.trim()) return user.name;
+  const first = user.first_name?.trim() ?? '';
+  const last = user.last_name?.trim() ?? '';
+  const combined = `${first} ${last}`.trim();
+  return combined || 'User';
+};
 import { companiesService } from '../../services/companies.service';
 import { usersService } from '../../services/users.service';
 import { propertiesService } from '../../services/properties.service';
@@ -65,7 +74,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
     title: '',
     date: null as Date | null,
     description: '',
-    priority: 'Medium' as 'Low' | 'Medium' | 'High'
+    priority: 'Medium' as 'Low' | 'Medium' | 'High',
+    assignees: [] as string[]
   });
 
   const [meetingForm, setMeetingForm] = useState({
@@ -99,16 +109,26 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
         setUsers(usersData);
 
         // Map events data to match CalendarEvent interface
-        const mappedEvents: Event[] = eventsData.map(event => ({
-          ...event,
-          extendedProps: {
-            type: event.extendedProps!.type,
-            priority: event.extendedProps?.priority?.toLowerCase() as 'low' | 'medium' | 'high',
-            companyId: (event as any).companyId ? parseInt((event as any).companyId) : undefined,
-            userIds: (event as any).attendees ? (event as any).attendees.map((id: string) => parseInt(id)) : [],
-            attendees: (event as any).attendees || []
-          }
-        }));
+        const mappedEvents: Event[] = eventsData.map(event => {
+          const rawAssignees: string[] = (event as any).assignees || (event as any).attendees || [];
+          const userIdsFromPayload = rawAssignees
+            .map((id) => Number(id))
+            .filter((id) => Number.isFinite(id));
+          const attendeesDisplay = userIdsFromPayload
+            .map((id) => formatUserLabel(usersData.find((user) => user.id === id)))
+            .filter(Boolean) as string[];
+
+          return {
+            ...event,
+            extendedProps: {
+              type: event.extendedProps!.type,
+              priority: event.extendedProps?.priority?.toLowerCase() as 'low' | 'medium' | 'high',
+              companyId: (event as any).companyId ? parseInt((event as any).companyId) : undefined,
+              userIds: userIdsFromPayload,
+              attendees: attendeesDisplay
+            }
+          };
+        });
 
         setEvents(mappedEvents);
         setFilteredEvents(mappedEvents);
@@ -189,15 +209,16 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
   };
 
   const handleEditEvent = (event: Event) => {
-    setEditingEvent(event);
-    if (event.extendedProps?.type === 'task') {
-      setTaskForm({
-        title: event.title,
-        date: new Date(event.start),
-        description: event.description || '',
-        priority: ((event.extendedProps?.priority as string)?.charAt(0).toUpperCase() + (event.extendedProps?.priority as string)?.slice(1) || 'Medium') as 'Low' | 'Medium' | 'High'
-      });
-      setCreateTaskOpen(true);
+      setEditingEvent(event);
+      if (event.extendedProps?.type === 'task') {
+        setTaskForm({
+          title: event.title,
+          date: new Date(event.start),
+          description: event.description || '',
+          priority: ((event.extendedProps?.priority as string)?.charAt(0).toUpperCase() + (event.extendedProps?.priority as string)?.slice(1) || 'Medium') as 'Low' | 'Medium' | 'High',
+          assignees: event.extendedProps?.userIds?.map((id) => id.toString()) || []
+        });
+        setCreateTaskOpen(true);
     } else if (event.extendedProps?.type === 'meeting') {
       const startDate = new Date(event.start);
       const endDate = new Date(event.end || event.start);
@@ -242,7 +263,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
         date: taskForm.date.toISOString(),
         priority: taskForm.priority,
         description: taskForm.description,
-        isArchived: false
+        isArchived: false,
+        assignees: taskForm.assignees
       };
 
       let updatedTask: Task;
@@ -252,6 +274,13 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
         updatedTask = await propertiesService.createTask(payload);
       }
 
+      const assigneeIds = taskForm.assignees
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id));
+      const attendeeNames = users
+        .filter((user) => taskForm.assignees.includes(user.id.toString()))
+        .map((user) => formatUserLabel(user));
+
       const newEvent: Event = {
         id: updatedTask.id,
         title: updatedTask.title,
@@ -259,7 +288,9 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
         description: updatedTask.description,
         extendedProps: {
           type: 'task',
-          priority: updatedTask.priority?.toLowerCase() as 'low' | 'medium' | 'high'
+          priority: updatedTask.priority?.toLowerCase() as 'low' | 'medium' | 'high',
+          userIds: assigneeIds,
+          attendees: attendeeNames
         }
       };
 
@@ -275,7 +306,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
         title: '',
         date: null,
         description: '',
-        priority: 'Medium'
+        priority: 'Medium',
+        assignees: []
       });
     } catch (error) {
       console.error('Error saving task:', error);
@@ -495,6 +527,27 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
                   <MenuItem value="High">High</MenuItem>
                 </Select>
               </FormControl>
+              <Autocomplete
+                multiple
+                options={users}
+                getOptionLabel={(user) => formatUserLabel(user)}
+                value={users.filter((user) => taskForm.assignees.includes(user.id.toString()))}
+                onChange={(_, newValue) => setTaskForm(prev => ({
+                  ...prev,
+                  assignees: newValue.map((user) => user.id.toString())
+                }))}
+                renderInput={(params) => (
+                  <TextField {...params} label="Assignees" placeholder="Select users" />
+                )}
+                renderTags={(value, getTagProps) =>
+                  value.map((user, index) => (
+                    <Chip
+                      label={formatUserLabel(user)}
+                      {...getTagProps({ index })}
+                    />
+                  ))
+                }
+              />
               <TextField
                 label="Description"
                 fullWidth
