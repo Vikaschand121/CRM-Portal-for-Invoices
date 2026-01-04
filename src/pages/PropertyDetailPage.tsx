@@ -112,6 +112,14 @@ const formatCurrency = (value?: number): string => {
   return GBP_FORMATTER.format(value);
 };
 
+const formatOptionalDateValue = (value?: string | null): string => {
+  if (!value) {
+    return 'N/A';
+  }
+  const parsedDate = new Date(value);
+  return Number.isNaN(parsedDate.getTime()) ? 'N/A' : parsedDate.toLocaleDateString();
+};
+
 const RENT_PAYMENT_FREQUENCY_OPTIONS: { value: RentPaymentFrequency; label: string }[] = [
   { value: 'MONTHLY', label: 'Monthly' },
   { value: 'QUARTERLY', label: 'Quarterly' },
@@ -990,7 +998,7 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
                     <TableCell>{new Date(tenant.leaseStartDate).toLocaleDateString()}</TableCell>
                     <TableCell>{new Date(tenant.leaseEndDate).toLocaleDateString()}</TableCell>
                     <TableCell>{tenant.rentReviewDates}</TableCell>
-                    <TableCell>{tenant.breakDate && !isNaN(new Date(tenant.breakDate).getTime()) ? new Date(tenant.breakDate).toLocaleDateString() : tenant.breakDate || 'N/A'}</TableCell>
+                    <TableCell>{formatOptionalDateValue(tenant.breakDate)}</TableCell>
                     {/* <TableCell>{tenant.isVatAvailable ? 'Yes' : 'No'}</TableCell> */}
                     <TableCell>
                       <Tooltip title="View Tenant Details">

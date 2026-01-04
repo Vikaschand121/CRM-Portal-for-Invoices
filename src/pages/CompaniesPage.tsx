@@ -73,6 +73,9 @@ const COMPANY_DOCUMENT_TYPES = [
   'Company Vat Certificate',
   'Company Accounts',
   'Company Insurance',
+  'Company Vehicles',
+  'Company Car Insurance',
+  'Other',
 ];
 
 const DATE_PLACEHOLDER = 'dd/mm/yyyy';

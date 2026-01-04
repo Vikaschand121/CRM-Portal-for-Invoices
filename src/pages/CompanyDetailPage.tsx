@@ -42,28 +42,6 @@ const GBP_FORMATTER = new Intl.NumberFormat('en-GB', {
   maximumFractionDigits: 0,
 });
 
-const formatCurrency = (value?: number | string | null): string => {
-  if (value === undefined || value === null || value === '') {
-    return GBP_FORMATTER.format(0);
-  }
-
-  if (typeof value === 'number') {
-    return GBP_FORMATTER.format(value);
-  }
-
-  const trimmed = value.toString().trim();
-  if (/^[\u00A3\u0024\u20AC]/.test(trimmed)) {
-    return trimmed;
-  }
-
-  const numeric = Number(trimmed);
-  if (!Number.isNaN(numeric)) {
-    return GBP_FORMATTER.format(numeric);
-  }
-
-  return trimmed;
-};
-
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
   <Box
     sx={{
@@ -209,26 +187,6 @@ export const CompanyDetailPage = () => {
     }
   }, [bankDetails]);
 
-  const portfolioStats = useMemo(() => {
-    if (!company) {
-      return {
-        totalProperties: null,
-        activeProperties: null,
-        portfolioValue: null,
-      };
-    }
-
-    return {
-      totalProperties:
-        company.totalProperties ??
-        (company.properties && company.properties.length > 0
-          ? company.properties.length
-          : null),
-      activeProperties: company.activeProperties ?? null,
-      portfolioValue: company.portfolioValue ?? null,
-    };
-  }, [company]);
-
   if (loading) {
     return (
       <Container maxWidth="lg">
@@ -282,20 +240,6 @@ export const CompanyDetailPage = () => {
     {
       label: 'SIC Code',
       value: company.sicCode,
-    },
-    {
-      label: 'Portfolio Value',
-      value:
-        portfolioStats.portfolioValue !== null
-          ? formatCurrency(portfolioStats.portfolioValue)
-          : 'N/A',
-    },
-    {
-      label: 'Total Properties',
-      value:
-        portfolioStats.totalProperties !== null
-          ? portfolioStats.totalProperties.toString()
-          : 'N/A',
     },
   ];
 

@@ -71,6 +71,17 @@ const formatCurrency = (value?: number): string => {
   return GBP_FORMATTER.format(value);
 };
 
+const formatBreakDateValue = (value?: string | null): string => {
+  if (!value) {
+    return 'N/A';
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'N/A';
+  }
+  return formatDate(value);
+};
+
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
   <Box
     sx={{
@@ -829,7 +840,7 @@ export const TenantDetailPage = () => {
                 <InfoRow label="Lease Start" value={formatDate(tenant.leaseStartDate)} />
                 <InfoRow label="Lease End" value={formatDate(tenant.leaseEndDate)} />
                 <InfoRow label="Rent Review Dates" value={tenant.rentReviewDates} />
-                <InfoRow label="Break Date" value={tenant.breakDate ? formatDate(tenant.breakDate) : 'None'} />
+                <InfoRow label="Break Date" value={formatBreakDateValue(tenant.breakDate)} />
                 <InfoRow label="Rent Start Date" value={formatDate(tenant.rentStartDate)} />
                 <InfoRow label="Payment Frequency" value={tenant.rentPaymentFrequency} />
                 <InfoRow label="VAT Registered" value={tenant.isVatRegistered ? 'Yes' : 'No'} />

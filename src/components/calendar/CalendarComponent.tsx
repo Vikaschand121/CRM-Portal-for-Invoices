@@ -16,6 +16,7 @@ import {
   Button,
   TextField,
   FormControl,
+  FormControlLabel,
   InputLabel,
   Select,
   MenuItem,
@@ -23,7 +24,8 @@ import {
   Stack,
   Chip,
   Autocomplete,
-  IconButton
+  IconButton,
+  Switch
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
@@ -75,7 +77,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
     date: null as Date | null,
     description: '',
     priority: 'Medium' as 'Low' | 'Medium' | 'High',
-    assignees: [] as string[]
+    assignees: [] as string[],
+    sendEmail: false
   });
 
   const [meetingForm, setMeetingForm] = useState({
@@ -85,7 +88,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
     endTime: null as Date | null,
     description: '',
     companyId: '',
-    userIds: [] as number[]
+    userIds: [] as number[],
+    sendEmail: false
   });
 
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -117,15 +121,19 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
           const attendeesDisplay = userIdsFromPayload
             .map((id) => formatUserLabel(usersData.find((user) => user.id === id)))
             .filter(Boolean) as string[];
+          const priority = event.extendedProps?.priority
+            ? (event.extendedProps.priority as string).toLowerCase() as 'low' | 'medium' | 'high'
+            : undefined;
 
           return {
             ...event,
             extendedProps: {
-              type: event.extendedProps!.type,
-              priority: event.extendedProps?.priority?.toLowerCase() as 'low' | 'medium' | 'high',
+              type: event.extendedProps?.type ?? 'task',
+              priority,
               companyId: (event as any).companyId ? parseInt((event as any).companyId) : undefined,
               userIds: userIdsFromPayload,
-              attendees: attendeesDisplay
+              attendees: attendeesDisplay,
+              sendEmail: event.extendedProps?.sendEmail ?? false
             }
           };
         });
@@ -209,16 +217,20 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
   };
 
   const handleEditEvent = (event: Event) => {
-      setEditingEvent(event);
-      if (event.extendedProps?.type === 'task') {
-        setTaskForm({
-          title: event.title,
-          date: new Date(event.start),
-          description: event.description || '',
-          priority: ((event.extendedProps?.priority as string)?.charAt(0).toUpperCase() + (event.extendedProps?.priority as string)?.slice(1) || 'Medium') as 'Low' | 'Medium' | 'High',
-          assignees: event.extendedProps?.userIds?.map((id) => id.toString()) || []
-        });
-        setCreateTaskOpen(true);
+    setEditingEvent(event);
+    if (event.extendedProps?.type === 'task') {
+      setTaskForm({
+        title: event.title,
+        date: new Date(event.start),
+        description: event.description || '',
+        priority:
+          ((event.extendedProps?.priority as string)?.charAt(0).toUpperCase() +
+            (event.extendedProps?.priority as string)?.slice(1) ||
+            'Medium') as 'Low' | 'Medium' | 'High',
+        assignees: event.extendedProps?.userIds?.map((id) => id.toString()) || [],
+        sendEmail: event.extendedProps?.sendEmail ?? false
+      });
+      setCreateTaskOpen(true);
     } else if (event.extendedProps?.type === 'meeting') {
       const startDate = new Date(event.start);
       const endDate = new Date(event.end || event.start);
@@ -229,7 +241,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
         endTime: endDate,
         description: event.description || '',
         companyId: event.extendedProps?.companyId?.toString() || '',
-        userIds: event.extendedProps?.userIds || []
+        userIds: event.extendedProps?.userIds || [],
+        sendEmail: event.extendedProps?.sendEmail ?? false
       });
       setCreateMeetingOpen(true);
     }
@@ -253,6 +266,20 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
     }
   };
 
+  const handleTaskSendEmailToggle = (checked: boolean) => {
+    if (checked && !window.confirm('Are you sure you want to send email?')) {
+      return;
+    }
+    setTaskForm(prev => ({ ...prev, sendEmail: checked }));
+  };
+
+  const handleMeetingSendEmailToggle = (checked: boolean) => {
+    if (checked && !window.confirm('Are you sure you want to send email?')) {
+      return;
+    }
+    setMeetingForm(prev => ({ ...prev, sendEmail: checked }));
+  };
+
   const handleCreateTask = async () => {
     if (!taskForm.title || !taskForm.date) return;
 
@@ -264,7 +291,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
         priority: taskForm.priority,
         description: taskForm.description,
         isArchived: false,
-        assignees: taskForm.assignees
+        assignees: taskForm.assignees,
+        sendEmail: taskForm.sendEmail
       };
 
       let updatedTask: Task;
@@ -290,7 +318,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
           type: 'task',
           priority: updatedTask.priority?.toLowerCase() as 'low' | 'medium' | 'high',
           userIds: assigneeIds,
-          attendees: attendeeNames
+          attendees: attendeeNames,
+          sendEmail: taskForm.sendEmail
         }
       };
 
@@ -307,7 +336,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
         date: null,
         description: '',
         priority: 'Medium',
-        assignees: []
+        assignees: [],
+        sendEmail: false
       });
     } catch (error) {
       console.error('Error saving task:', error);
@@ -334,7 +364,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
         companyId: meetingForm.companyId,
         attendees: meetingForm.userIds.map(id => id.toString()),
         description: meetingForm.description,
-        isArchived: false
+        isArchived: false,
+        sendEmail: meetingForm.sendEmail
       };
 
       let updatedMeeting: any;
@@ -362,7 +393,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
           type: 'meeting',
           companyId: meetingForm.companyId ? parseInt(meetingForm.companyId) : undefined,
           userIds: meetingForm.userIds,
-          attendees: users.filter(u => meetingForm.userIds.includes(u.id)).map(u => u.name || `${u.first_name} ${u.last_name}`)
+          attendees: users.filter(u => meetingForm.userIds.includes(u.id)).map(u => u.name || `${u.first_name} ${u.last_name}`),
+          sendEmail: meetingForm.sendEmail
         }
       };
 
@@ -381,7 +413,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
         endTime: null,
         description: '',
         companyId: '',
-        userIds: []
+        userIds: [],
+        sendEmail: false
       });
     } catch (error) {
       console.error('Error saving meeting:', error);
@@ -556,6 +589,17 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
                 value={taskForm.description}
                 onChange={(e) => setTaskForm(prev => ({ ...prev, description: e.target.value }))}
               />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={taskForm.sendEmail}
+                    onChange={(_, checked) => handleTaskSendEmailToggle(checked)}
+                    color="primary"
+                  />
+                }
+                label="Are you sure you want to send email?"
+                sx={{ mt: 1 }}
+              />
             </Stack>
           </LocalizationProvider>
         </DialogContent>
@@ -638,6 +682,17 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
                 rows={3}
                 value={meetingForm.description}
                 onChange={(e) => setMeetingForm(prev => ({ ...prev, description: e.target.value }))}
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={meetingForm.sendEmail}
+                    onChange={(_, checked) => handleMeetingSendEmailToggle(checked)}
+                    color="primary"
+                  />
+                }
+                label="Are you sure you want to send email?"
+                sx={{ mt: 1 }}
               />
             </Stack>
           </LocalizationProvider>

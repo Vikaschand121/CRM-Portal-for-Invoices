@@ -140,6 +140,7 @@ export interface CalendarEvent {
     location?: string;
     companyId?: number;
     userIds?: number[];
+    sendEmail?: boolean;
   };
 }
 
@@ -151,6 +152,7 @@ export interface Task {
   priority?: 'low' | 'medium' | 'high';
   isArchived?: boolean;
   assignees?: string[];
+  sendEmail?: boolean;
 }
 
 export interface CreateTaskPayload {
@@ -160,6 +162,7 @@ export interface CreateTaskPayload {
   description?: string;
   isArchived?: boolean;
   assignees: string[];
+  sendEmail?: boolean;
 }
 
 export interface CreateMeetingPayload {
@@ -171,6 +174,7 @@ export interface CreateMeetingPayload {
   attendees: string[];
   description?: string;
   isArchived?: boolean;
+  sendEmail?: boolean;
 }
 
 export interface Meeting {
@@ -182,6 +186,7 @@ export interface Meeting {
   description?: string;
   companyId?: number;
   userIds?: number[];
+  sendEmail?: boolean;
 }
 
 export type RentPaymentFrequency = 'MONTHLY' | 'QUARTERLY';
