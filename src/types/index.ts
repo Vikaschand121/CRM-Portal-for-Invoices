@@ -201,6 +201,7 @@ export interface Tenant {
   isReviewedDates: boolean;
   isVatRegistered: boolean;
   rentPaymentFrequency: RentPaymentFrequency;
+  isRecurring?: boolean;
   tenantEmail: string;
   tenantContact: string;
   tenantCorrespondingAddress: string;

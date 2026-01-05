@@ -18,6 +18,13 @@ class TenantsService {
     return api.patch<Tenant>(`/property-management/tenants/${id}`, payload);
   }
 
+  async setInvoiceRecurring(tenantId: number, isRecurring: boolean): Promise<void> {
+    return api.patch<void>('/property-management/tenants/set-invoice-recurring', {
+      tenantId,
+      isRecurring,
+    });
+  }
+
   async deleteTenant(id: number): Promise<void> {
     return api.delete<void>(`/property-management/tenants/${id}`);
   }
