@@ -43,6 +43,7 @@ const formatUserLabel = (user?: User) => {
   const combined = `${first} ${last}`.trim();
   return combined || 'User';
 };
+
 import { companiesService } from '../../services/companies.service';
 import { usersService } from '../../services/users.service';
 import { propertiesService } from '../../services/properties.service';
@@ -78,7 +79,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
     description: '',
     priority: 'Medium' as 'Low' | 'Medium' | 'High',
     assignees: [] as string[],
-    sendEmail: false
+    isMailNotify: false,
+    files: [] as string[]
   });
 
   const [meetingForm, setMeetingForm] = useState({
@@ -89,7 +91,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
     description: '',
     companyId: '',
     userIds: [] as number[],
-    sendEmail: false
+    sendEmail: false,
+    files: [] as File[]
   });
 
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -133,7 +136,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
               companyId: (event as any).companyId ? parseInt((event as any).companyId) : undefined,
               userIds: userIdsFromPayload,
               attendees: attendeesDisplay,
-              sendEmail: event.extendedProps?.sendEmail ?? false
+              isMailNotify: event.extendedProps?.isMailNotify ?? event.extendedProps?.sendEmail ?? false,
+              files: event.extendedProps?.files ?? []
             }
           };
         });
@@ -228,7 +232,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
             (event.extendedProps?.priority as string)?.slice(1) ||
             'Medium') as 'Low' | 'Medium' | 'High',
         assignees: event.extendedProps?.userIds?.map((id) => id.toString()) || [],
-        sendEmail: event.extendedProps?.sendEmail ?? false
+        isMailNotify: event.extendedProps?.isMailNotify ?? event.extendedProps?.sendEmail ?? false,
+        files: event.extendedProps?.files ?? []
       });
       setCreateTaskOpen(true);
     } else if (event.extendedProps?.type === 'meeting') {
@@ -266,11 +271,11 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
     }
   };
 
-  const handleTaskSendEmailToggle = (checked: boolean) => {
+  const handleTaskMailNotifyToggle = (checked: boolean) => {
     if (checked && !window.confirm('Are you sure you want to send email?')) {
       return;
     }
-    setTaskForm(prev => ({ ...prev, sendEmail: checked }));
+    setTaskForm(prev => ({ ...prev, isMailNotify: checked }));
   };
 
   const handleMeetingSendEmailToggle = (checked: boolean) => {
@@ -280,26 +285,33 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
     setMeetingForm(prev => ({ ...prev, sendEmail: checked }));
   };
 
+  const buildTaskFormData = () => {
+    const formData = new FormData();
+    formData.append('title', taskForm.title);
+    formData.append('date', taskForm.date?.toISOString() ?? '');
+    formData.append('priority', taskForm.priority);
+    formData.append('description', taskForm.description);
+    formData.append('isArchived', 'false');
+    formData.append('assignees', JSON.stringify(taskForm.assignees));
+    formData.append('isMailNotify', taskForm.isMailNotify ? 'true' : 'false');
+    taskForm.files.forEach((file) => {
+      formData.append('attachments', file);
+    });
+    return formData;
+  };
+
   const handleCreateTask = async () => {
     if (!taskForm.title || !taskForm.date) return;
 
     setCreatingTask(true);
     try {
-      const payload = {
-        title: taskForm.title,
-        date: taskForm.date.toISOString(),
-        priority: taskForm.priority,
-        description: taskForm.description,
-        isArchived: false,
-        assignees: taskForm.assignees,
-        sendEmail: taskForm.sendEmail
-      };
+      const formData = buildTaskFormData();
 
       let updatedTask: Task;
       if (editingEvent && editingEvent.extendedProps?.type === 'task') {
-        updatedTask = await propertiesService.updateTask(editingEvent.id, payload);
+        updatedTask = await propertiesService.updateTask(editingEvent.id, formData);
       } else {
-        updatedTask = await propertiesService.createTask(payload);
+        updatedTask = await propertiesService.createTask(formData);
       }
 
       const assigneeIds = taskForm.assignees
@@ -319,7 +331,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
           priority: updatedTask.priority?.toLowerCase() as 'low' | 'medium' | 'high',
           userIds: assigneeIds,
           attendees: attendeeNames,
-          sendEmail: taskForm.sendEmail
+          isMailNotify: taskForm.isMailNotify,
+          files: taskForm.files.map((file) => file.name)
         }
       };
 
@@ -337,7 +350,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
         description: '',
         priority: 'Medium',
         assignees: [],
-        sendEmail: false
+        isMailNotify: false,
+        files: []
       });
     } catch (error) {
       console.error('Error saving task:', error);
@@ -348,31 +362,29 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
   };
 
   const handleCreateMeeting = async () => {
-    if (!meetingForm.title || !meetingForm.date || !meetingForm.startTime || !meetingForm.endTime) return;
+  if (!meetingForm.title || !meetingForm.date || !meetingForm.startTime || !meetingForm.endTime) return;
 
     setCreatingMeeting(true);
     try {
-      const dateStr = meetingForm.date.toISOString().split('T')[0];
-      const startTimeStr = meetingForm.startTime.toTimeString().split(' ')[0];
-      const endTimeStr = meetingForm.endTime.toTimeString().split(' ')[0];
-
-      const payload: CreateMeetingPayload = {
-        title: meetingForm.title,
-        date: dateStr,
-        startTime: startTimeStr,
-        endTime: endTimeStr,
-        companyId: meetingForm.companyId,
-        attendees: meetingForm.userIds.map(id => id.toString()),
-        description: meetingForm.description,
-        isArchived: false,
-        sendEmail: meetingForm.sendEmail
-      };
+      const formData = new FormData();
+      formData.append('title', meetingForm.title);
+      formData.append('date', meetingForm.date.toISOString().split('T')[0]);
+      formData.append('startTime', meetingForm.startTime.toTimeString().split(' ')[0]);
+      formData.append('endTime', meetingForm.endTime.toTimeString().split(' ')[0]);
+      formData.append('companyId', meetingForm.companyId);
+      formData.append('attendees', JSON.stringify(meetingForm.userIds.map(id => id.toString())));
+      formData.append('description', meetingForm.description);
+      formData.append('isArchived', 'false');
+      formData.append('sendEmail', meetingForm.sendEmail ? 'true' : 'false');
+      meetingForm.files.forEach(file => {
+        formData.append('attachments', file);
+      });
 
       let updatedMeeting: any;
       if (editingEvent && editingEvent.extendedProps?.type === 'meeting') {
-        updatedMeeting = await propertiesService.updateMeeting(editingEvent.id, payload);
+        updatedMeeting = await propertiesService.updateMeeting(editingEvent.id, formData);
       } else {
-        updatedMeeting = await propertiesService.createMeeting(payload);
+        updatedMeeting = await propertiesService.createMeeting(formData);
       }
 
       const startDateTime = new Date(meetingForm.date);
@@ -394,7 +406,8 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
           companyId: meetingForm.companyId ? parseInt(meetingForm.companyId) : undefined,
           userIds: meetingForm.userIds,
           attendees: users.filter(u => meetingForm.userIds.includes(u.id)).map(u => u.name || `${u.first_name} ${u.last_name}`),
-          sendEmail: meetingForm.sendEmail
+          sendEmail: meetingForm.sendEmail,
+          files: meetingForm.files.map((file) => file.name)
         }
       };
 
@@ -589,11 +602,28 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
                 value={taskForm.description}
                 onChange={(e) => setTaskForm(prev => ({ ...prev, description: e.target.value }))}
               />
+              <Button variant="outlined" component="label">
+                Upload Attachments
+                <input
+                  type="file"
+                  multiple
+                  hidden
+                  onChange={(e) => {
+                    const files = e.target.files ? Array.from(e.target.files) : [];
+                    setTaskForm(prev => ({ ...prev, files }));
+                  }}
+                />
+              </Button>
+              {taskForm.files.length > 0 && (
+                <Typography variant="body2" color="text.secondary">
+                  {taskForm.files.map(file => file.name).join(', ')}
+                </Typography>
+              )}
               <FormControlLabel
                 control={
                   <Switch
-                    checked={taskForm.sendEmail}
-                    onChange={(_, checked) => handleTaskSendEmailToggle(checked)}
+                    checked={taskForm.isMailNotify}
+                    onChange={(_, checked) => handleTaskMailNotifyToggle(checked)}
                     color="primary"
                   />
                 }
@@ -683,6 +713,23 @@ const CalendarComponent = forwardRef<CalendarComponentRef>((props, ref) => {
                 value={meetingForm.description}
                 onChange={(e) => setMeetingForm(prev => ({ ...prev, description: e.target.value }))}
               />
+              <Button variant="outlined" component="label">
+                Upload Attachments
+                <input
+                  type="file"
+                  multiple
+                  hidden
+                  onChange={(e) => {
+                    const files = e.target.files ? Array.from(e.target.files) : [];
+                    setMeetingForm(prev => ({ ...prev, files }));
+                  }}
+                />
+              </Button>
+              {meetingForm.files.length > 0 && (
+                <Typography variant="body2" color="text.secondary">
+                  {meetingForm.files.map(file => file.name).join(', ')}
+                </Typography>
+              )}
               <FormControlLabel
                 control={
                   <Switch

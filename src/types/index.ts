@@ -141,6 +141,8 @@ export interface CalendarEvent {
     companyId?: number;
     userIds?: number[];
     sendEmail?: boolean;
+    isMailNotify?: boolean;
+    files?: string[];
   };
 }
 
@@ -152,7 +154,8 @@ export interface Task {
   priority?: 'low' | 'medium' | 'high';
   isArchived?: boolean;
   assignees?: string[];
-  sendEmail?: boolean;
+  isMailNotify?: boolean;
+  files?: string[];
 }
 
 export interface CreateTaskPayload {
@@ -162,7 +165,8 @@ export interface CreateTaskPayload {
   description?: string;
   isArchived?: boolean;
   assignees: string[];
-  sendEmail?: boolean;
+  isMailNotify?: boolean;
+  files?: string[];
 }
 
 export interface CreateMeetingPayload {
@@ -175,6 +179,7 @@ export interface CreateMeetingPayload {
   description?: string;
   isArchived?: boolean;
   sendEmail?: boolean;
+  attachments?: string[];
 }
 
 export interface Meeting {
@@ -187,6 +192,7 @@ export interface Meeting {
   companyId?: number;
   userIds?: number[];
   sendEmail?: boolean;
+  attachments?: string[];
 }
 
 export type RentPaymentFrequency = 'MONTHLY' | 'QUARTERLY';
@@ -314,6 +320,17 @@ export interface Invoice {
   tenant?: Tenant;
 }
 
+export interface RentReview {
+  id: number;
+  tenantId: number;
+  rentReviewDate: string;
+  implemented: boolean;
+  newRentAmount: string;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface CreateInvoicePayload {
   tenantId: number;
   propertyId: number;
@@ -404,3 +421,10 @@ export interface CreateCreditNotePayload {
 }
 
 export interface UpdateCreditNotePayload extends CreateCreditNotePayload {}
+
+export interface UpdateRentReviewPayload {
+  tenantId: number;
+  rentReviewDate: string;
+  implemented: boolean;
+  newRentAmount: string;
+}

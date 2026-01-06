@@ -63,6 +63,8 @@ import { CreditNoteDocumentSubTypePage } from '../pages/CreditNoteDocumentSubTyp
 import { ArchivedCreditNoteDocumentsPage } from '../pages/ArchivedCreditNoteDocumentsPage';
 import { ArchivedCreditNoteDocumentTypePage } from '../pages/ArchivedCreditNoteDocumentTypePage';
 import { ArchivedCreditNoteDocumentSubTypePage } from '../pages/ArchivedCreditNoteDocumentSubTypePage';
+import MeetingDetailPage from '../pages/MeetingDetailPage';
+import RentReviewDetailPage from '../pages/RentReviewDetailPage';
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div>
@@ -151,6 +153,7 @@ export const AppRoutes = () => {
         <Route path="credit-notes/:creditNoteId/documents/archived" element={<ArchivedCreditNoteDocumentsPage />} />
         <Route path="credit-notes/:creditNoteId/documents/archived/type/:documentType" element={<ArchivedCreditNoteDocumentTypePage />} />
         <Route path="credit-notes/:creditNoteId/documents/archived/subtype/:documentSubType" element={<ArchivedCreditNoteDocumentSubTypePage />} />
+        <Route path="rent-reviews/:rentReviewId" element={<RentReviewDetailPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="legal" element={<LegalPage />} />
         <Route path="financial" element={<FinancialPage />} />

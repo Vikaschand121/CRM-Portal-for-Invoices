@@ -27,6 +27,7 @@ import {
   MenuItem,
   Tooltip,
   Switch,
+  FormControlLabel,
 } from '@mui/material';
 import {
   Add,
@@ -43,11 +44,24 @@ import {
   Payment as PaymentIcon,
   Receipt as CreditNoteIcon,
 } from '@mui/icons-material';
-import { Tenant, Invoice, CreateDocumentPayload, Payment, CreatePaymentPayload, UpdatePaymentPayload, CreditNote, CreateCreditNotePayload, UpdateCreditNotePayload } from '../types';
+import {
+  Tenant,
+  Invoice,
+  CreateDocumentPayload,
+  Payment,
+  CreatePaymentPayload,
+  UpdatePaymentPayload,
+  CreditNote,
+  CreateCreditNotePayload,
+  UpdateCreditNotePayload,
+  RentReview,
+  UpdateRentReviewPayload,
+} from '../types';
 import { tenantsService } from '../services/tenants.service';
 import { invoicesService } from '../services/invoices.service';
 import { documentsService } from '../services/documents.service';
 import { propertiesService } from '../services/properties.service';
+import { rentReviewsService } from '../services/rentReviews.service';
 import { formatDate } from '../utils/helpers';
 import { useSnackbar } from '../hooks/useSnackbar';
 
@@ -70,6 +84,17 @@ const formatCurrency = (value?: number): string => {
     return GBP_FORMATTER.format(0);
   }
   return GBP_FORMATTER.format(value);
+};
+
+const formatDateForInput = (value?: string): string => {
+  if (!value) {
+    return '';
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+  return parsed.toISOString().split('T')[0];
 };
 
 const formatBreakDateValue = (value?: string | null): string => {
@@ -127,6 +152,21 @@ export const TenantDetailPage = () => {
   const [pendingRecurring, setPendingRecurring] = useState(false);
   const [recurringDialogOpen, setRecurringDialogOpen] = useState(false);
   const [savingRecurring, setSavingRecurring] = useState(false);
+  const [rentReviews, setRentReviews] = useState<RentReview[]>([]);
+  const [rentReviewsLoading, setRentReviewsLoading] = useState(false);
+  const [rentReviewDialogOpen, setRentReviewDialogOpen] = useState(false);
+  const [selectedRentReviewId, setSelectedRentReviewId] = useState<number | null>(null);
+  const [rentReviewForm, setRentReviewForm] = useState<UpdateRentReviewPayload>({
+    tenantId: 0,
+    rentReviewDate: '',
+    implemented: false,
+    newRentAmount: '',
+  });
+  const [rentReviewFormErrors, setRentReviewFormErrors] = useState({
+    rentReviewDate: false,
+    newRentAmount: false,
+  });
+  const [savingRentReview, setSavingRentReview] = useState(false);
   const [documentForm, setDocumentForm] = useState<CreateDocumentPayload>({
     documentName: '',
     documentType: INVOICE_DOCUMENT_TYPES[0],
@@ -200,6 +240,18 @@ export const TenantDetailPage = () => {
     description: false,
   });
 
+  const fetchRentReviews = async (tenantIdNumber: number) => {
+    setRentReviewsLoading(true);
+    try {
+      const rentReviewData = await rentReviewsService.getFullDetails({ tenantId: tenantIdNumber });
+      setRentReviews(rentReviewData);
+    } catch (err) {
+      showSnackbar('Failed to load rent reviews', 'error');
+    } finally {
+      setRentReviewsLoading(false);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       if (!tenantId) {
@@ -220,6 +272,7 @@ export const TenantDetailPage = () => {
         setPayments(paymentData);
         const creditNoteData = await propertiesService.getCreditNotes(parsedTenantId);
         setCreditNotes(creditNoteData);
+        await fetchRentReviews(parsedTenantId);
       } catch (err) {
         setError('Failed to load tenant data');
       } finally {
@@ -278,6 +331,91 @@ export const TenantDetailPage = () => {
     setDisplayedRecurring(isRecurring);
     setPendingRecurring(isRecurring);
     setRecurringDialogOpen(false);
+  };
+
+  const resetRentReviewForm = () => {
+    setRentReviewForm({
+      tenantId: tenant?.id || 0,
+      rentReviewDate: '',
+      implemented: false,
+      newRentAmount: '',
+    });
+    setRentReviewFormErrors({
+      rentReviewDate: false,
+      newRentAmount: false,
+    });
+    setSelectedRentReviewId(null);
+  };
+
+  const handleOpenRentReviewDialog = (rentReview: RentReview) => {
+    setSelectedRentReviewId(rentReview.id);
+    setRentReviewForm({
+      tenantId: tenant?.id || 0,
+      rentReviewDate: formatDateForInput(rentReview.rentReviewDate),
+      implemented: rentReview.implemented,
+      newRentAmount: rentReview.newRentAmount,
+    });
+    setRentReviewFormErrors({
+      rentReviewDate: false,
+      newRentAmount: false,
+    });
+    setRentReviewDialogOpen(true);
+  };
+
+  const handleCloseRentReviewDialog = () => {
+    setRentReviewDialogOpen(false);
+    resetRentReviewForm();
+  };
+
+  const handleSaveRentReview = async () => {
+    const errors = {
+      rentReviewDate: !rentReviewForm.rentReviewDate.trim(),
+      newRentAmount: !rentReviewForm.newRentAmount.trim(),
+    };
+    setRentReviewFormErrors(errors);
+
+    if (Object.values(errors).some(Boolean)) {
+      return;
+    }
+
+    setSavingRentReview(true);
+    try {
+      const payload: UpdateRentReviewPayload = {
+        ...rentReviewForm,
+        tenantId: tenant?.id || rentReviewForm.tenantId,
+      };
+      let savedReview: RentReview;
+      if (selectedRentReviewId) {
+        savedReview = await rentReviewsService.updateRentReview(selectedRentReviewId, payload);
+        showSnackbar('Rent review updated successfully', 'success');
+      } else {
+        savedReview = await rentReviewsService.createRentReview(payload);
+        setSelectedRentReviewId(savedReview.id);
+        showSnackbar('Rent review created successfully', 'success');
+      }
+      setRentReviewForm({
+        tenantId: savedReview.tenantId,
+        rentReviewDate: formatDateForInput(savedReview.rentReviewDate),
+        implemented: savedReview.implemented,
+        newRentAmount: savedReview.newRentAmount,
+      });
+      handleCloseRentReviewDialog();
+      if (tenantId) {
+        const parsedTenantId = parseInt(tenantId, 10);
+        await fetchRentReviews(parsedTenantId);
+      }
+    } catch (error) {
+      if ((error as any)?.errors) {
+        const serverErrors = (error as any).errors;
+        setRentReviewFormErrors({
+          rentReviewDate: Boolean(serverErrors?.rentReviewDate),
+          newRentAmount: Boolean(serverErrors?.newRentAmount),
+        });
+      }
+      showSnackbar('Failed to update rent review', 'error');
+    } finally {
+      setSavingRentReview(false);
+    }
   };
 
   const handleViewInvoice = (invoiceId: number) => {
@@ -961,6 +1099,120 @@ export const TenantDetailPage = () => {
         </Box>
 
 
+        {/* Rent Reviews Section */}
+        <Box sx={{ mt: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">Rent Reviews</Typography>
+          </Box>
+          <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
+            <Table>
+              <TableHead sx={{ bgcolor: 'primary.main' }}>
+                <TableRow>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Rent Review Date</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Implemented</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>New Rent Amount</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {rentReviewsLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={4}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CircularProgress size={20} />
+                        <Typography variant="body2">Loading rent reviews...</Typography>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ) : rentReviews.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4}>
+                      <Typography variant="body2" color="text.secondary">
+                        No rent review schedule is available for this tenant.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  rentReviews.map((rentReview) => (
+                    <TableRow key={rentReview.id}>
+                      <TableCell>{formatDate(rentReview.rentReviewDate)}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={rentReview.implemented ? 'Implemented' : 'Pending'}
+                          color={rentReview.implemented ? 'success' : 'warning'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {Number.isNaN(parseFloat(rentReview.newRentAmount))
+                          ? 'N/A'
+                          : formatCurrency(Number.parseFloat(rentReview.newRentAmount))}
+                      </TableCell>
+                      <TableCell>
+                      {/* <Tooltip title="View Rent Review">
+                        <IconButton onClick={() => navigate(`/rent-reviews/${rentReview.id}`)} sx={{ color: 'primary.main' }}>
+                          <Visibility />
+                        </IconButton>
+                      </Tooltip> */}
+                      <Tooltip title="Edit Rent Review">
+                        <IconButton onClick={() => handleOpenRentReviewDialog(rentReview)} sx={{ color: 'secondary.main' }}>
+                          <Edit />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+
+        <Dialog open={rentReviewDialogOpen} onClose={handleCloseRentReviewDialog} maxWidth="sm" fullWidth>
+          <DialogTitle>Edit Rent Review</DialogTitle>
+          <DialogContent>
+            <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                label="Rent Review Date"
+                type="date"
+                value={rentReviewForm.rentReviewDate}
+                onChange={(e) => setRentReviewForm({ ...rentReviewForm, rentReviewDate: e.target.value })}
+                fullWidth
+                required
+                InputLabelProps={{ shrink: true }}
+                error={rentReviewFormErrors.rentReviewDate}
+                helperText={rentReviewFormErrors.rentReviewDate ? '* required' : ''}
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={rentReviewForm.implemented}
+                    onChange={(e) => setRentReviewForm({ ...rentReviewForm, implemented: e.target.checked })}
+                  />
+                }
+                label="Implemented"
+              />
+              <TextField
+                label="New Rent Amount"
+                value={rentReviewForm.newRentAmount}
+                onChange={(e) => setRentReviewForm({ ...rentReviewForm, newRentAmount: e.target.value })}
+                fullWidth
+                required
+                error={rentReviewFormErrors.newRentAmount}
+                helperText={rentReviewFormErrors.newRentAmount ? '* required' : ''}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseRentReviewDialog} disabled={savingRentReview}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveRentReview} variant="contained" disabled={savingRentReview}>
+              {savingRentReview ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         {/* Invoices Section */}
         <Box sx={{ mt: 4 }}>
           <Box
@@ -1051,9 +1303,9 @@ export const TenantDetailPage = () => {
                     </TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+            </TableBody>
+          </Table>
+        </TableContainer>
         </Box>
 
         {/* Payments Section */}

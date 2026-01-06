@@ -110,11 +110,11 @@ class PropertiesService {
     return api.get<CreditNote[]>('/property-management/credit-notes/archived');
   }
 
-  async createTask(payload: CreateTaskPayload): Promise<Task> {
+  async createTask(payload: FormData): Promise<Task> {
     return api.post<Task>('/property-management/tasks', payload);
   }
 
-  async updateTask(id: string, payload: Partial<CreateTaskPayload>): Promise<Task> {
+  async updateTask(id: string, payload: FormData): Promise<Task> {
     return api.patch<Task>(`/property-management/tasks/${id}`, payload);
   }
 
@@ -122,16 +122,20 @@ class PropertiesService {
     return api.delete<void>(`/property-management/tasks/${id}`);
   }
 
-  async createMeeting(payload: CreateMeetingPayload): Promise<any> {
+  async createMeeting(payload: FormData): Promise<any> {
     return api.post<any>('/property-management/meetings', payload);
   }
 
-  async updateMeeting(id: string, payload: Partial<CreateMeetingPayload>): Promise<any> {
+  async updateMeeting(id: string, payload: FormData): Promise<any> {
     return api.patch<any>(`/property-management/meetings/${id}`, payload);
   }
 
   async deleteMeeting(id: string): Promise<void> {
     return api.delete<void>(`/property-management/meetings/${id}`);
+  }
+
+  async getMeeting(id: string): Promise<Meeting> {
+    return api.get<Meeting>(`/property-management/meetings/${id}`);
   }
 
   async getEvents(): Promise<CalendarEvent[]> {
