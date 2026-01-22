@@ -82,8 +82,8 @@ export interface InvoicePreviewProps {
   billToAddress: string;
   propertyAddress: string;
   propertyName: string;
-  rentalPeriodStart: string;
-  rentalPeriodEnd: string;
+  crmRentStartDate: string | null;
+  crmRentEndDate: string | null;
   netAmount: number;
   vatAmount: number;
   vatRate: number;
@@ -108,8 +108,8 @@ export const InvoicePreview = ({
   billToAddress,
   propertyAddress,
   propertyName,
-  rentalPeriodStart,
-  rentalPeriodEnd,
+  crmRentStartDate,
+  crmRentEndDate,
   netAmount,
   vatAmount,
   vatRate,
@@ -136,7 +136,7 @@ export const InvoicePreview = ({
     ? Number(balanceDue)
     : computedBalanceWithCredit;
 
-  const periodLabel = `${formatDate(rentalPeriodStart)} to ${formatDate(rentalPeriodEnd)}`;
+  const periodLabel = `${formatDate(crmRentStartDate)} to ${formatDate(crmRentEndDate)}`;
   const notesSummary = notes?.trim() || 'No notes provided.';
 
   return (
@@ -384,3 +384,4 @@ const GridSection = ({ left, right }: { left: React.ReactNode; right: React.Reac
     <Box sx={{ flex: 1, pl: { sm: 2, md: 4 } }}>{right}</Box>
   </Stack>
 );
+

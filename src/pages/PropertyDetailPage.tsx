@@ -175,6 +175,7 @@ export const PropertyDetailPage = () => {
     tenantCorrespondingAddress: '',
     breakDate: '',
     rentStartDate: '',
+    crmRentStartDate: '',
     aggreedAnnualRent: undefined,
     netAmount: undefined,
     isArchived: false,
@@ -184,6 +185,7 @@ export const PropertyDetailPage = () => {
     leaseStartDate: false,
     leaseEndDate: false,
     rentReviewDates: false,
+    crmRentStartDate: false,
     breakDate: false,
   });
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
@@ -298,6 +300,7 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
       tenantCorrespondingAddress: '',
       breakDate: '',
       rentStartDate: '',
+      crmRentStartDate: '',
       aggreedAnnualRent: undefined,
       netAmount: undefined,
       previousBalance: undefined,
@@ -308,6 +311,7 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
       leaseStartDate: false,
       leaseEndDate: false,
       rentReviewDates: false,
+      crmRentStartDate: false,
       breakDate: false,
     });
     setTenantDialogOpen(true);
@@ -329,6 +333,7 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
       tenantCorrespondingAddress: tenant.tenantCorrespondingAddress,
       breakDate: tenant.breakDate,
       rentStartDate: tenant.rentStartDate,
+      crmRentStartDate: tenant.crmRentStartDate,
       aggreedAnnualRent: tenant.aggreedAnnualRent,
       netAmount: tenant.netAmount,
       previousBalance: tenant.previousBalance,
@@ -339,6 +344,7 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
       leaseStartDate: false,
       leaseEndDate: false,
       rentReviewDates: false,
+      crmRentStartDate: false,
       breakDate: false,
     });
     setTenantDialogOpen(true);
@@ -372,6 +378,7 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
       leaseStartDate: !tenantForm.leaseStartDate,
       leaseEndDate: !tenantForm.leaseEndDate,
       rentReviewDates: !tenantForm.rentReviewDates.trim(),
+      crmRentStartDate: !tenantForm.crmRentStartDate,
       breakDate: !tenantForm.breakDate,
     };
     setTenantFormErrors(errors);
@@ -1163,6 +1170,17 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
               InputLabelProps={{ shrink: true }}
             />
             <TextField
+              label="CRM Rent Start Date"
+              type="date"
+              value={tenantForm.crmRentStartDate}
+              onChange={(e) => setTenantForm({ ...tenantForm, crmRentStartDate: e.target.value })}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              required
+              error={tenantFormErrors.crmRentStartDate}
+              helperText={tenantFormErrors.crmRentStartDate ? "* required" : ""}
+            />
+            <TextField
               label="Previous Balance"
               type="number"
               value={tenantForm.previousBalance || ''}
@@ -1373,3 +1391,8 @@ const normalizeTenantPayload = (form: CreateTenantPayload): CreateTenantPayload 
 };
 
 export default PropertyDetailPage;
+
+
+
+
+

@@ -18,6 +18,7 @@ export const createTenantFromData = async () => {
     tenantCorrespondingAddress: "123 Baker Street, London, W1 6XE",
     breakDate: "2028-12-31",
     rentStartDate: "2025-01-01",
+    crmRentStartDate: "2025-01-15",
     previousBalance: 1250.5,
     isArchived: false,
   };
@@ -31,3 +32,4 @@ export const createTenantFromData = async () => {
     throw error;
   }
 };
+

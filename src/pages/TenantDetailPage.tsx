@@ -1028,6 +1028,7 @@ export const TenantDetailPage = () => {
                 <InfoRow label="Rent Review Dates" value={tenant.rentReviewDates} />
                 <InfoRow label="Break Date" value={formatBreakDateValue(tenant.breakDate)} />
                 <InfoRow label="Rent Start Date" value={formatDate(tenant.rentStartDate)} />
+                <InfoRow label="CRM Rent Start Date" value={formatBreakDateValue(tenant.crmRentStartDate)} />
                 <InfoRow label="Payment Frequency" value={tenant.rentPaymentFrequency} />
                 <InfoRow label="VAT Registered" value={tenant.isVatRegistered ? 'Yes' : 'No'} />
               </Box>
@@ -1104,14 +1105,23 @@ export const TenantDetailPage = () => {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Rent Reviews</Typography>
           </Box>
-          <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
-            <Table>
-              <TableHead sx={{ bgcolor: 'primary.main' }}>
+          <TableContainer
+            component={Paper}
+            sx={{
+              borderRadius: 3,
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+              maxHeight: 360,
+            }}
+          >
+            <Table stickyHeader>
+              <TableHead>
                 <TableRow>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Rent Review Date</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Implemented</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>New Rent Amount</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, bgcolor: 'primary.main' }}>Rent Review Date</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, bgcolor: 'primary.main' }}>Implemented</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, bgcolor: 'primary.main' }}>New Rent Amount</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, bgcolor: 'primary.main' }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -1746,3 +1756,4 @@ export const TenantDetailPage = () => {
 };
 
 export default TenantDetailPage;
+

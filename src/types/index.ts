@@ -213,6 +213,7 @@ export interface Tenant {
   tenantCorrespondingAddress: string;
   breakDate: string;
   rentStartDate: string;
+  crmRentStartDate: string | null;
   lenderName?: string;
   aggreedAnnualRent?: string;
   netAmount?: string;
@@ -237,6 +238,7 @@ export interface CreateTenantPayload {
   tenantCorrespondingAddress: string;
   breakDate: string;
   rentStartDate: string;
+  crmRentStartDate: string | null;
   lenderName?: string;
   aggreedAnnualRent?: string;
   netAmount?: string;
@@ -294,8 +296,8 @@ export interface Invoice {
   billToAddress: string;
   propertyAddress: string;
   propertyId: number;
-  rentalPeriodStart: string;
-  rentalPeriodEnd: string;
+  crmRentStartDate: string | null;
+  crmRentEndDate: string | null;
   netAmount: number;
   vatAmount: number;
   vatRate: number;
@@ -346,8 +348,8 @@ export interface CreateInvoicePayload {
   billToName: string;
   billToAddress: string;
   propertyAddress: string;
-  rentalPeriodStart: string;
-  rentalPeriodEnd: string;
+  crmRentStartDate: string | null;
+  crmRentEndDate: string | null;
   netAmount: number;
   vatAmount: number;
   vatRate: number;
@@ -428,3 +430,7 @@ export interface UpdateRentReviewPayload {
   implemented: boolean;
   newRentAmount: string;
 }
+
+
+
+

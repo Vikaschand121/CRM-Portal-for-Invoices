@@ -152,8 +152,8 @@ export const InvoiceViewPage = () => {
         billToAddress={invoice.billToAddress || tenant?.tenantCorrespondingAddress || ''}
         propertyAddress={property.propertyAddress}
         propertyName={property.propertyName}
-        rentalPeriodStart={invoice.rentalPeriodStart}
-        rentalPeriodEnd={invoice.rentalPeriodEnd}
+        crmRentStartDate={invoice.crmRentStartDate}
+        crmRentEndDate={invoice.crmRentEndDate}
         netAmount={invoice.netAmount}
         vatAmount={invoice.vatAmount}
         vatRate={invoice.vatRate}
@@ -176,3 +176,4 @@ export const InvoiceViewPage = () => {
     </Container>
   );
 };
+

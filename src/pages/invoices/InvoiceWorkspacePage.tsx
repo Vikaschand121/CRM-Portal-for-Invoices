@@ -1,4 +1,4 @@
-ï»¿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
@@ -33,8 +33,8 @@ interface InvoiceFormState {
   invoiceType: InvoiceType;
   billingFrequency: BillingFrequency;
   invoiceDate: string;
-  rentalPeriodStart: string;
-  rentalPeriodEnd: string;
+  crmRentStartDate: string;
+  crmRentEndDate: string;
   tenantId: string | null;
   companyId: number | null;
   propertyId: number;
@@ -92,12 +92,45 @@ const periodEnd = (start: string, freq: BillingFrequency) => {
   end.setDate(end.getDate() - 1);
   return iso(end);
 };
+const getCrmQuarterRange = (start: string) => {
+  const parsed = new Date(start);
+  if (Number.isNaN(parsed.getTime())) return { start: '', end: '' };
+
+  const year = parsed.getFullYear();
+  const mar25 = new Date(year, 2, 25);
+  const jun23 = new Date(year, 5, 23);
+  const jun24 = new Date(year, 5, 24);
+  const sep28 = new Date(year, 8, 28);
+  const sep29 = new Date(year, 8, 29);
+  const dec24 = new Date(year, 11, 24);
+  const dec25 = new Date(year, 11, 25);
+
+  if (parsed >= mar25 && parsed <= jun23) {
+    return { start: iso(mar25), end: iso(jun23) };
+  }
+
+  if (parsed >= jun24 && parsed <= sep28) {
+    return { start: iso(jun24), end: iso(sep28) };
+  }
+
+  if (parsed >= sep29 && parsed <= dec24) {
+    return { start: iso(sep29), end: iso(dec24) };
+  }
+
+  if (parsed >= dec25) {
+    return { start: iso(dec25), end: iso(new Date(year + 1, 2, 24)) };
+  }
+
+  return { start: iso(new Date(year - 1, 11, 25)), end: iso(new Date(year, 2, 24)) };
+};
 
 const computeRentalPeriodRange = (start: string, freq: BillingFrequency) => {
   if (!start) return { start: '', end: '' };
-  const quarterRange = freq === 'quarterly' ? getQuarterRange(start) : null;
-  const alignedStart = quarterRange?.start || start;
-  return { start: alignedStart, end: periodEnd(alignedStart, freq) };
+  if (freq === 'quarterly') {
+    const quarterRange = getCrmQuarterRange(start);
+    return { start, end: quarterRange.end };
+  }
+  return { start, end: periodEnd(start, freq) };
 };
 
 const formatDate = (value?: string) => {
@@ -148,8 +181,8 @@ const buildInitialForm = (propertyId: number, companyId: number | null, tenantId
     invoiceType: 'rental',
     billingFrequency: 'monthly',
     invoiceDate: today,
-    rentalPeriodStart: initialRange.start || today,
-    rentalPeriodEnd: initialRange.end,
+    crmRentStartDate: initialRange.start || today,
+    crmRentEndDate: initialRange.end,
     tenantId: tenantId ? tenantId.toString() : null,
     companyId,
     propertyId,
@@ -209,7 +242,7 @@ const buildTenantDerivedPatch = (
 ): Partial<InvoiceFormState> => {
   const frequencyKey = tenant.rentPaymentFrequency?.toLowerCase();
   const billingFrequency: BillingFrequency = frequencyKey === 'quarterly' ? 'quarterly' : 'monthly';
-  const baseStart = tenant.rentStartDate || currentForm.rentalPeriodStart || '';
+  const baseStart = tenant.crmRentStartDate || tenant.rentStartDate || currentForm.crmRentStartDate || '';
   const periodRange = computeRentalPeriodRange(baseStart, billingFrequency);
   const tenantHasNetValue = tenant.netAmount?.trim() ? true : false;
   const parsedTenantNet = tenantHasNetValue ? parseCurrencyValue(tenant.netAmount) : currentForm.netAmount || 0;
@@ -225,8 +258,8 @@ const buildTenantDerivedPatch = (
   return {
     tenantId: tenant.id.toString(),
     billingFrequency,
-    rentalPeriodStart: periodRange.start || currentForm.rentalPeriodStart,
-    rentalPeriodEnd: periodRange.end || currentForm.rentalPeriodEnd,
+    crmRentStartDate: periodRange.start || currentForm.crmRentStartDate,
+    crmRentEndDate: periodRange.end || currentForm.crmRentEndDate,
     netAmount: safeNetAmount,
     vatAmount,
     totalAmount,
@@ -270,8 +303,8 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
       return null;
     }
 
-    const startValue = formState.rentalPeriodStart;
-    const endValue = formState.rentalPeriodEnd;
+    const startValue = formState.crmRentStartDate;
+    const endValue = formState.crmRentEndDate;
     if (!startValue || !endValue) {
       return null;
     }
@@ -349,8 +382,8 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             invoiceType: target.invoiceType === 'Rent' ? 'rental' : 'other',
             billingFrequency: 'monthly',
             invoiceDate: target.invoiceDate,
-            rentalPeriodStart: target.rentalPeriodStart,
-            rentalPeriodEnd: target.rentalPeriodEnd,
+            crmRentStartDate: target.crmRentStartDate ?? '',
+            crmRentEndDate: target.crmRentEndDate ?? '',
             tenantId: target.tenantId.toString(),
             companyId: foundProperty.company?.id ?? numericCompanyId,
             propertyId: numericPropertyId,
@@ -494,8 +527,8 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
         billToName: form.billToName,
         billToAddress: form.billToAddress,
         propertyAddress: property.propertyAddress,
-        rentalPeriodStart: form.rentalPeriodStart,
-        rentalPeriodEnd: form.rentalPeriodEnd,
+        crmRentStartDate: form.crmRentStartDate || null,
+        crmRentEndDate: form.crmRentEndDate || null,
         netAmount: form.netAmount,
         vatAmount: form.vatAmount,
         vatRate: vatRateValue,
@@ -669,16 +702,16 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             </Grid>
             <Grid item xs={12} md={4}>
               <TextField
-                label="Rental Period Start"
+                label="CRM Rent Start Date"
                 type="date"
-                value={form.rentalPeriodStart}
+                value={form.crmRentStartDate}
                 fullWidth
                 InputLabelProps={{ shrink: true }}
                 disabled
               />
             </Grid>
             <Grid item xs={12} md={4}>
-              <TextField label="Rental Period End" type="date" value={form.rentalPeriodEnd} fullWidth InputLabelProps={{ shrink: true }} disabled />
+              <TextField label="CRM Rent End Date" type="date" value={form.crmRentEndDate} fullWidth InputLabelProps={{ shrink: true }} disabled />
             </Grid>
 
             <Grid item xs={12} md={4}>
@@ -686,7 +719,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
                 label={`VAT (${currentTenant?.isVatRegistered ? '20%' : '0%'})`}
                 value={form.vatAmount.toFixed(2)}
                 fullWidth
-                InputProps={{ startAdornment: <InputAdornment position="start">Â£</InputAdornment> }}
+                InputProps={{ startAdornment: <InputAdornment position="start">£</InputAdornment> }}
                 disabled
               />
             </Grid>
@@ -697,7 +730,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
                 type="number"
                 value={form.paymentMade ?? 0}
                 fullWidth
-                InputProps={{ startAdornment: <InputAdornment position="start">Â£</InputAdornment> }}
+                InputProps={{ startAdornment: <InputAdornment position="start">£</InputAdornment> }}
                 onChange={(e) => updateForm({ paymentMade: Number(e.target.value) || 0 })}
               />
             </Grid>
@@ -707,7 +740,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
                 type="number"
                 value={form.creditNoteAmount ?? 0}
                 fullWidth
-                InputProps={{ startAdornment: <InputAdornment position="start">Â£</InputAdornment> }}
+                InputProps={{ startAdornment: <InputAdornment position="start">£</InputAdornment> }}
                 onChange={(e) => updateForm({ creditNoteAmount: Number(e.target.value) || 0 })}
               />
             </Grid>
@@ -728,7 +761,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
                 type="number"
                 value={form.balanceDue ?? ''}
                 fullWidth
-                InputProps={{ startAdornment: <InputAdornment position="start">Â£</InputAdornment> }}
+                InputProps={{ startAdornment: <InputAdornment position="start">£</InputAdornment> }}
                 onChange={(e) => updateForm({ balanceDue: e.target.value })}
               />
             </Grid> */}
@@ -747,8 +780,8 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             billToAddress={form.billToAddress || currentTenant?.tenantCorrespondingAddress || property.propertyAddress}
             propertyAddress={property.propertyAddress}
             propertyName={property.propertyName}
-            rentalPeriodStart={form.rentalPeriodStart}
-            rentalPeriodEnd={form.rentalPeriodEnd}
+            crmRentStartDate={form.crmRentStartDate}
+            crmRentEndDate={form.crmRentEndDate}
             netAmount={form.netAmount}
             vatAmount={form.vatAmount}
             vatRate={currentTenant?.isVatRegistered ? 0.2 : 0}
@@ -768,3 +801,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
     </Container>
   );
 };
+
+
+
+
