@@ -16,6 +16,28 @@ const formatDate = (value?: string) => {
   return parsed.toISOString().slice(0, 10);
 };
 
+const parseCurrencyValue = (value?: string | number): number => {
+  if (value === undefined || value === null) return 0;
+  const normalized = typeof value === 'string' ? value.replace(/[^0-9.-]/g, '') : value.toString();
+  if (!normalized) return 0;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const resolveBalanceDue = (params: {
+  previousBalance?: string | number;
+  totalAmount?: string | number;
+  paymentMade?: string | number;
+  creditNoteAmount?: string | number;
+}): number => {
+  const previous = parseCurrencyValue(params.previousBalance);
+  const total = parseCurrencyValue(params.totalAmount);
+  const payment = parseCurrencyValue(params.paymentMade);
+  const creditNote = parseCurrencyValue(params.creditNoteAmount);
+  const calculated = previous + total - payment - creditNote;
+  return Number.isFinite(calculated) ? calculated : 0;
+};
+
 export const InvoiceViewPage = () => {
   const { companyId, propertyId, invoiceId } = useParams<{ companyId: string; propertyId: string; invoiceId: string }>();
   const numericPropertyId = Number(propertyId);
@@ -152,16 +174,20 @@ export const InvoiceViewPage = () => {
     );
   }
 
-  const previousBalanceValue = tenant?.previousBalance ?? 0;
-  const creditNoteValue = Number.isFinite(Number(invoice.creditNoteAmount ?? 0)) ? Number(invoice.creditNoteAmount ?? 0) : 0;
-  const baseBalance =
-    invoice.balanceDue && invoice.balanceDue !== ''
-      ? Number(invoice.balanceDue)
-      : previousBalanceValue + invoice.totalAmount - invoice.paymentMade;
-  const safeBalanceDue =
-    Number.isFinite(baseBalance)
-      ? baseBalance - creditNoteValue
-      : invoice.totalAmount - creditNoteValue;
+  const previousBalanceValue = parseCurrencyValue(tenant?.previousBalance);
+  const paymentMadeValue = parseCurrencyValue(invoice.paymentMade);
+  const creditNoteValue = parseCurrencyValue(invoice.creditNoteAmount);
+  const totalAmountValue = parseCurrencyValue(invoice.totalAmount);
+  const storedBalanceNormalized = typeof invoice.balanceDue === 'string' ? invoice.balanceDue.replace(/[^0-9.-]/g, '') : invoice.balanceDue?.toString() ?? '';
+  const hasStoredBalance = storedBalanceNormalized.trim() !== '' && Number.isFinite(Number(storedBalanceNormalized));
+  const safeBalanceDue = hasStoredBalance
+    ? parseCurrencyValue(invoice.balanceDue)
+    : resolveBalanceDue({
+        previousBalance: previousBalanceValue,
+        totalAmount: totalAmountValue,
+        paymentMade: paymentMadeValue,
+        creditNoteAmount: creditNoteValue,
+      });
   const isRentalInvoice = invoice.invoiceName === 'Rental Invoice' || invoice.invoiceType === 'Rent';
 
   return (

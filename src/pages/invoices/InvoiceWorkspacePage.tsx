@@ -220,6 +220,20 @@ const parseCurrencyValue = (value?: string | number): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const resolveBalanceDue = (params: {
+  previousBalance?: string | number;
+  totalAmount?: string | number;
+  paymentMade?: string | number;
+  creditNoteAmount?: string | number;
+}): number => {
+  const previous = parseCurrencyValue(params.previousBalance);
+  const total = parseCurrencyValue(params.totalAmount);
+  const payment = parseCurrencyValue(params.paymentMade);
+  const creditNote = parseCurrencyValue(params.creditNoteAmount);
+  const calculated = previous + total - payment - creditNote;
+  return Number.isFinite(calculated) ? calculated : 0;
+};
+
 const NOTE_DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
   day: '2-digit',
   month: '2-digit',
@@ -556,13 +570,16 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
     try {
       setSaving(true);
 
-      const previousBalanceValue = currentTenant?.previousBalance ?? 0;
-      const paymentMadeValue = form.paymentMade ?? 0;
-      const creditNoteAmountValue = Number.isFinite(Number(form.creditNoteAmount ?? 0)) ? Number(form.creditNoteAmount ?? 0) : 0;
-      const hasManualBalance = form.balanceDue !== undefined && form.balanceDue !== null && form.balanceDue !== '';
-      const autoBalance = previousBalanceValue + form.totalAmount - paymentMadeValue - creditNoteAmountValue;
-      const calculatedBalance = hasManualBalance ? Number(form.balanceDue) : autoBalance;
-      const safeBalance = Number.isFinite(calculatedBalance) ? calculatedBalance : 0;
+      const previousBalanceValue = parseCurrencyValue(currentTenant?.previousBalance);
+      const paymentMadeValue = parseCurrencyValue(form.paymentMade);
+      const creditNoteAmountValue = parseCurrencyValue(form.creditNoteAmount);
+      const totalAmountValue = parseCurrencyValue(form.totalAmount);
+      const safeBalance = resolveBalanceDue({
+        previousBalance: previousBalanceValue,
+        totalAmount: totalAmountValue,
+        paymentMade: paymentMadeValue,
+        creditNoteAmount: creditNoteAmountValue,
+      });
 
       const resolvedInvoiceType = resolveInvoiceType(form.invoiceType);
       const vatRateValue = form.netAmount ? form.vatAmount / form.netAmount : 0;
@@ -642,13 +659,16 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
   }
 
   const invoiceTitle = INVOICE_TYPES.find((type) => type.value === form.invoiceType)?.label ?? 'Invoice';
-  const previousBalanceValue = currentTenant?.previousBalance ?? 0;
-  const paymentMadeValue = form.paymentMade ?? 0;
-  const creditNoteAmountValue = Number.isFinite(Number(form.creditNoteAmount ?? 0)) ? Number(form.creditNoteAmount ?? 0) : 0;
-  const autoBalance = previousBalanceValue + form.totalAmount - paymentMadeValue - creditNoteAmountValue;
-  const hasManualBalance = form.balanceDue !== undefined && form.balanceDue !== null && form.balanceDue !== '';
-  const calculatedBalance = hasManualBalance ? Number(form.balanceDue) : autoBalance;
-  const safeBalanceDue = Number.isFinite(calculatedBalance) ? calculatedBalance : 0;
+  const previousBalanceValue = parseCurrencyValue(currentTenant?.previousBalance);
+  const paymentMadeValue = parseCurrencyValue(form.paymentMade);
+  const creditNoteAmountValue = parseCurrencyValue(form.creditNoteAmount);
+  const totalAmountValue = parseCurrencyValue(form.totalAmount);
+  const safeBalanceDue = resolveBalanceDue({
+    previousBalance: previousBalanceValue,
+    totalAmount: totalAmountValue,
+    paymentMade: paymentMadeValue,
+    creditNoteAmount: creditNoteAmountValue,
+  });
   const isRentalInvoice = form.invoiceType === 'rental';
 
   return (
