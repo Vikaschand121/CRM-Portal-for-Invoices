@@ -1,16 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
   Box,
   Button,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Container,
   Grid,
   InputAdornment,
   MenuItem,
   Paper,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from '@mui/material';
@@ -77,6 +82,14 @@ const iso = (value: Date | string) => {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   return date.toISOString().slice(0, 10);
+};
+
+const addDays = (value: string, days: number) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  date.setUTCDate(date.getUTCDate() + days);
+  return iso(date);
 };
 
 const periodEnd = (start: string, freq: BillingFrequency) => {
@@ -182,7 +195,7 @@ const buildInitialForm = (propertyId: number, companyId: number | null, tenantId
     billingFrequency: 'monthly',
     invoiceDate: today,
     crmRentStartDate: initialRange.start || today,
-    crmRentEndDate: initialRange.end,
+    crmRentEndDate: addDays(initialRange.end, 1),
     tenantId: tenantId ? tenantId.toString() : null,
     companyId,
     propertyId,
@@ -259,7 +272,7 @@ const buildTenantDerivedPatch = (
     tenantId: tenant.id.toString(),
     billingFrequency,
     crmRentStartDate: periodRange.start || currentForm.crmRentStartDate,
-    crmRentEndDate: periodRange.end || currentForm.crmRentEndDate,
+    crmRentEndDate: addDays(periodRange.end || currentForm.crmRentEndDate, 1),
     netAmount: safeNetAmount,
     vatAmount,
     totalAmount,
@@ -292,6 +305,11 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [displayedRecurring, setDisplayedRecurring] = useState(false);
+  const [pendingRecurring, setPendingRecurring] = useState(false);
+  const [recurringDialogOpen, setRecurringDialogOpen] = useState(false);
+  const [savingRecurring, setSavingRecurring] = useState(false);
 
   const buildFirstInvoiceNote = (tenant: Tenant, formState: InvoiceFormState, invoicesList: Invoice[]): string | null => {
     if (!formState.tenantId || Number(formState.tenantId) !== tenant.id) {
@@ -339,6 +357,13 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
   );
 
   useEffect(() => {
+    if (currentTenant && typeof currentTenant.isRecurring === 'boolean') {
+      setIsRecurring(currentTenant.isRecurring);
+      setDisplayedRecurring(currentTenant.isRecurring);
+    }
+  }, [currentTenant]);
+
+  useEffect(() => {
     let cancelled = false;
 
     const loadPage = async () => {
@@ -383,7 +408,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             billingFrequency: 'monthly',
             invoiceDate: target.invoiceDate,
             crmRentStartDate: target.crmRentStartDate ?? '',
-            crmRentEndDate: target.crmRentEndDate ?? '',
+            crmRentEndDate: addDays(target.crmRentEndDate ?? '', 1),
             tenantId: target.tenantId.toString(),
             companyId: foundProperty.company?.id ?? numericCompanyId,
             propertyId: numericPropertyId,
@@ -442,6 +467,40 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
 
   const updateForm = (patch: Partial<InvoiceFormState>) => {
     setForm((prev) => (prev ? { ...prev, ...patch } : prev));
+  };
+
+  const handleRecurringToggle = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextValue = event.target.checked;
+    setPendingRecurring(nextValue);
+    setDisplayedRecurring(nextValue);
+    setRecurringDialogOpen(true);
+  };
+
+  const handleConfirmRecurring = async () => {
+    if (!currentTenant) {
+      setRecurringDialogOpen(false);
+      return;
+    }
+    setSavingRecurring(true);
+    try {
+      await tenantsService.setInvoiceRecurring(currentTenant.id, pendingRecurring);
+      setIsRecurring(pendingRecurring);
+      setDisplayedRecurring(pendingRecurring);
+      showSnackbar('Recurring preference updated', 'success');
+    } catch (error) {
+      showSnackbar('Failed to update recurring preference', 'error');
+      setDisplayedRecurring(isRecurring);
+      setPendingRecurring(isRecurring);
+    } finally {
+      setSavingRecurring(false);
+      setRecurringDialogOpen(false);
+    }
+  };
+
+  const handleCancelRecurring = () => {
+    setDisplayedRecurring(isRecurring);
+    setPendingRecurring(isRecurring);
+    setRecurringDialogOpen(false);
   };
 
   const handleTenantSelect = (tenantId: string) => {
@@ -590,6 +649,7 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
   const hasManualBalance = form.balanceDue !== undefined && form.balanceDue !== null && form.balanceDue !== '';
   const calculatedBalance = hasManualBalance ? Number(form.balanceDue) : autoBalance;
   const safeBalanceDue = Number.isFinite(calculatedBalance) ? calculatedBalance : 0;
+  const isRentalInvoice = form.invoiceType === 'rental';
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -606,6 +666,23 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
         >
           Back to Invoice
         </Button>
+        {isRentalInvoice && currentTenant ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              Non-Recurring
+            </Typography>
+            <Switch
+              checked={displayedRecurring}
+              onChange={handleRecurringToggle}
+              disabled={savingRecurring}
+              color="secondary"
+              inputProps={{ 'aria-label': 'Toggle recurring invoices' }}
+            />
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              Recurring
+            </Typography>
+          </Box>
+        ) : null}
         <Button
           variant="contained"
           startIcon={saving || submitted ? <CircularProgress size={20} /> : <Send />}
@@ -796,6 +873,24 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             creditNoteAmount={creditNoteAmountValue}
           />
         </Paper>
+
+        <Dialog open={recurringDialogOpen} onClose={handleCancelRecurring} maxWidth="sm" fullWidth>
+          <DialogTitle>Confirm Invoice Mode</DialogTitle>
+          <DialogContent>
+            <Typography>
+              Are you sure you want to mark invoices for this tenant as{' '}
+              {pendingRecurring ? 'Recurring' : 'Non-Recurring'}?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCancelRecurring} disabled={savingRecurring}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmRecurring} variant="contained" disabled={savingRecurring}>
+              {savingRecurring ? 'Saving...' : 'Confirm'}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
       </Stack>
     </Container>

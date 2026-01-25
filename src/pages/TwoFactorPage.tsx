@@ -101,6 +101,15 @@ export const TwoFactorPage = () => {
           {/* Left Side - Progress & Info */}
           <Box sx={{ textAlign: { xs: 'center', md: 'left' }, color: 'white' }}>
             <Box sx={{ mb: 4 }}>
+              <Avatar
+                src={companyLogo}
+                sx={{
+                  width: 80,
+                  height: 80,
+                  mb: 3,
+                  mx: { xs: 'auto', md: '0' },
+                }}
+              />
               <Typography variant="h3" component="h1" gutterBottom fontWeight={700}>
                 Positive Bespoke Business Solutions Limited
               </Typography>

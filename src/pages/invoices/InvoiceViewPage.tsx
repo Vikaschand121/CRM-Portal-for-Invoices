@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
+import { ChangeEvent, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Alert, Button, CircularProgress, Container, Stack } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Switch, Typography } from '@mui/material';
 import { ArrowBack, Edit, Print, Delete, Description } from '@mui/icons-material';
 import { Invoice } from '../../types';
 import { invoicesService } from '../../services/invoices.service';
 import { propertiesService } from '../../services/properties.service';
 import { tenantsService } from '../../services/tenants.service';
 import { InvoicePreview } from '../../components/InvoicePreview';
+import { useSnackbar } from '../../hooks/useSnackbar';
 
 const formatDate = (value?: string) => {
   if (!value) return '';
@@ -21,12 +22,18 @@ export const InvoiceViewPage = () => {
   const numericInvoiceId = Number(invoiceId);
 
   const navigate = useNavigate();
+  const { showSnackbar } = useSnackbar();
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [property, setProperty] = useState<any>(null);
   const [tenant, setTenant] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [displayedRecurring, setDisplayedRecurring] = useState(false);
+  const [pendingRecurring, setPendingRecurring] = useState(false);
+  const [recurringDialogOpen, setRecurringDialogOpen] = useState(false);
+  const [savingRecurring, setSavingRecurring] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,6 +76,48 @@ export const InvoiceViewPage = () => {
       cancelled = true;
     };
   }, [numericPropertyId, numericInvoiceId]);
+
+  useEffect(() => {
+    if (tenant && typeof tenant.isRecurring === 'boolean') {
+      setIsRecurring(tenant.isRecurring);
+      setDisplayedRecurring(tenant.isRecurring);
+    }
+  }, [tenant]);
+
+  const handleRecurringToggle = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextValue = event.target.checked;
+    setPendingRecurring(nextValue);
+    setDisplayedRecurring(nextValue);
+    setRecurringDialogOpen(true);
+  };
+
+  const handleConfirmRecurring = async () => {
+    if (!tenant) {
+      setRecurringDialogOpen(false);
+      return;
+    }
+    setSavingRecurring(true);
+    try {
+      await tenantsService.setInvoiceRecurring(tenant.id, pendingRecurring);
+      setIsRecurring(pendingRecurring);
+      setDisplayedRecurring(pendingRecurring);
+      setTenant((prev: any) => (prev ? { ...prev, isRecurring: pendingRecurring } : prev));
+      showSnackbar('Recurring preference updated', 'success');
+    } catch (error) {
+      showSnackbar('Failed to update recurring preference', 'error');
+      setDisplayedRecurring(isRecurring);
+      setPendingRecurring(isRecurring);
+    } finally {
+      setSavingRecurring(false);
+      setRecurringDialogOpen(false);
+    }
+  };
+
+  const handleCancelRecurring = () => {
+    setDisplayedRecurring(isRecurring);
+    setPendingRecurring(isRecurring);
+    setRecurringDialogOpen(false);
+  };
 
   const handlePrint = () => window.print();
 
@@ -113,6 +162,7 @@ export const InvoiceViewPage = () => {
     Number.isFinite(baseBalance)
       ? baseBalance - creditNoteValue
       : invoice.totalAmount - creditNoteValue;
+  const isRentalInvoice = invoice.invoiceName === 'Rental Invoice' || invoice.invoiceType === 'Rent';
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -126,6 +176,23 @@ export const InvoiceViewPage = () => {
         >
           Back to Invoice
         </Button>
+        {isRentalInvoice && tenant ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              Non-Recurring
+            </Typography>
+            <Switch
+              checked={displayedRecurring}
+              onChange={handleRecurringToggle}
+              disabled={savingRecurring}
+              color="secondary"
+              inputProps={{ 'aria-label': 'Toggle recurring invoices' }}
+            />
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              Recurring
+            </Typography>
+          </Box>
+        ) : null}
         <Stack direction="row" spacing={1}>
           <Button variant="outlined" startIcon={<Edit />} onClick={() => navigate(`/companies/${companyId}/properties/${propertyId}/invoices/${invoiceId}/edit`)}>
             Edit Invoice
@@ -173,6 +240,24 @@ export const InvoiceViewPage = () => {
           bankAddress: invoice.bankAddress,
         }}
       />
+
+      <Dialog open={recurringDialogOpen} onClose={handleCancelRecurring} maxWidth="sm" fullWidth>
+        <DialogTitle>Confirm Invoice Mode</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to mark invoices for this tenant as{' '}
+            {pendingRecurring ? 'Recurring' : 'Non-Recurring'}?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelRecurring} disabled={savingRecurring}>
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmRecurring} variant="contained" disabled={savingRecurring}>
+            {savingRecurring ? 'Saving...' : 'Confirm'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
