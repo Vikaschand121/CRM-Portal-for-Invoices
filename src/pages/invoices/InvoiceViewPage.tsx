@@ -53,9 +53,6 @@ export const InvoiceViewPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [isRecurring, setIsRecurring] = useState(false);
   const [displayedRecurring, setDisplayedRecurring] = useState(false);
-  const [pendingRecurring, setPendingRecurring] = useState(false);
-  const [recurringDialogOpen, setRecurringDialogOpen] = useState(false);
-  const [savingRecurring, setSavingRecurring] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,41 +102,6 @@ export const InvoiceViewPage = () => {
       setDisplayedRecurring(tenant.isRecurring);
     }
   }, [tenant]);
-
-  const handleRecurringToggle = (event: ChangeEvent<HTMLInputElement>) => {
-    const nextValue = event.target.checked;
-    setPendingRecurring(nextValue);
-    setDisplayedRecurring(nextValue);
-    setRecurringDialogOpen(true);
-  };
-
-  const handleConfirmRecurring = async () => {
-    if (!tenant) {
-      setRecurringDialogOpen(false);
-      return;
-    }
-    setSavingRecurring(true);
-    try {
-      await tenantsService.setInvoiceRecurring(tenant.id, pendingRecurring);
-      setIsRecurring(pendingRecurring);
-      setDisplayedRecurring(pendingRecurring);
-      setTenant((prev: any) => (prev ? { ...prev, isRecurring: pendingRecurring } : prev));
-      showSnackbar('Recurring preference updated', 'success');
-    } catch (error) {
-      showSnackbar('Failed to update recurring preference', 'error');
-      setDisplayedRecurring(isRecurring);
-      setPendingRecurring(isRecurring);
-    } finally {
-      setSavingRecurring(false);
-      setRecurringDialogOpen(false);
-    }
-  };
-
-  const handleCancelRecurring = () => {
-    setDisplayedRecurring(isRecurring);
-    setPendingRecurring(isRecurring);
-    setRecurringDialogOpen(false);
-  };
 
   const handlePrint = () => window.print();
 
@@ -209,8 +171,8 @@ export const InvoiceViewPage = () => {
             </Typography>
             <Switch
               checked={displayedRecurring}
-              onChange={handleRecurringToggle}
-              disabled={savingRecurring}
+              onChange={(event) => { const nextValue = event.target.checked; setDisplayedRecurring(nextValue); setIsRecurring(nextValue); }}
+              disabled={false}
               color="secondary"
               inputProps={{ 'aria-label': 'Toggle recurring invoices' }}
             />
@@ -266,24 +228,6 @@ export const InvoiceViewPage = () => {
           bankAddress: invoice.bankAddress,
         }}
       />
-
-      <Dialog open={recurringDialogOpen} onClose={handleCancelRecurring} maxWidth="sm" fullWidth>
-        <DialogTitle>Confirm Invoice Mode</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to mark invoices for this tenant as{' '}
-            {pendingRecurring ? 'Recurring' : 'Non-Recurring'}?
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelRecurring} disabled={savingRecurring}>
-            Cancel
-          </Button>
-          <Button onClick={handleConfirmRecurring} variant="contained" disabled={savingRecurring}>
-            {savingRecurring ? 'Saving...' : 'Confirm'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Container>
   );
 };

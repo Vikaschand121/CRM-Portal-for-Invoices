@@ -321,9 +321,6 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
   const [error, setError] = useState<string | null>(null);
   const [isRecurring, setIsRecurring] = useState(false);
   const [displayedRecurring, setDisplayedRecurring] = useState(false);
-  const [pendingRecurring, setPendingRecurring] = useState(false);
-  const [recurringDialogOpen, setRecurringDialogOpen] = useState(false);
-  const [savingRecurring, setSavingRecurring] = useState(false);
 
   const buildFirstInvoiceNote = (tenant: Tenant, formState: InvoiceFormState, invoicesList: Invoice[]): string | null => {
     if (!formState.tenantId || Number(formState.tenantId) !== tenant.id) {
@@ -483,40 +480,6 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
     setForm((prev) => (prev ? { ...prev, ...patch } : prev));
   };
 
-  const handleRecurringToggle = (event: ChangeEvent<HTMLInputElement>) => {
-    const nextValue = event.target.checked;
-    setPendingRecurring(nextValue);
-    setDisplayedRecurring(nextValue);
-    setRecurringDialogOpen(true);
-  };
-
-  const handleConfirmRecurring = async () => {
-    if (!currentTenant) {
-      setRecurringDialogOpen(false);
-      return;
-    }
-    setSavingRecurring(true);
-    try {
-      await tenantsService.setInvoiceRecurring(currentTenant.id, pendingRecurring);
-      setIsRecurring(pendingRecurring);
-      setDisplayedRecurring(pendingRecurring);
-      showSnackbar('Recurring preference updated', 'success');
-    } catch (error) {
-      showSnackbar('Failed to update recurring preference', 'error');
-      setDisplayedRecurring(isRecurring);
-      setPendingRecurring(isRecurring);
-    } finally {
-      setSavingRecurring(false);
-      setRecurringDialogOpen(false);
-    }
-  };
-
-  const handleCancelRecurring = () => {
-    setDisplayedRecurring(isRecurring);
-    setPendingRecurring(isRecurring);
-    setRecurringDialogOpen(false);
-  };
-
   const handleTenantSelect = (tenantId: string) => {
     const tenant = tenants.find((t) => t.id.toString() === tenantId);
     if (!tenant) return;
@@ -610,7 +573,10 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
         vatRate: vatRateValue,
         totalAmount: form.totalAmount,
         paymentMade: paymentMadeValue,
+        paymentMode: 'Bank Transfer',
+        isArchived: false,
         balanceDue: safeBalance.toFixed(2),
+        isRecurring: displayedRecurring,
         notes: form.notes,
         creditNoteAmount: creditNoteAmountValue,
         bankAccountName: bankDetails?.accountHolderName || '',
@@ -686,23 +652,6 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
         >
           Back to Invoice
         </Button>
-        {isRentalInvoice && currentTenant ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              Non-Recurring
-            </Typography>
-            <Switch
-              checked={displayedRecurring}
-              onChange={handleRecurringToggle}
-              disabled={savingRecurring}
-              color="secondary"
-              inputProps={{ 'aria-label': 'Toggle recurring invoices' }}
-            />
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              Recurring
-            </Typography>
-          </Box>
-        ) : null}
         <Button
           variant="contained"
           startIcon={saving || submitted ? <CircularProgress size={20} /> : <Send />}
@@ -716,34 +665,53 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
       <Stack spacing={3}>
         <Paper elevation={1} sx={{ p: { xs: 2, md: 3 }, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
           <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
-              <TextField
-                select
-                label="Invoice Type"
-                value={form.invoiceType}
-                fullWidth
-                onChange={(e) => {
-                  const invoiceType = e.target.value as InvoiceType;
-                  setForm((prev) => {
-                    if (!prev) return prev;
-                    const tenant = tenants.find((t) => t.id.toString() === prev.tenantId);
-                    const next = { ...prev, invoiceType };
-                    next.invoiceNumber = generateInvoiceNumber(
-                      property?.propertyAddress ?? '',
-                      tenant?.tenantName ?? '',
-                      invoiceType,
-                      existingInvoices
-                    );
-                    return next;
-                  });
-                }}
-              >
-                {INVOICE_TYPES.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </TextField>
+                        <Grid item xs={12} md={4}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                <TextField
+                  select
+                  label="Invoice Type"
+                  value={form.invoiceType}
+                  fullWidth
+                  onChange={(e) => {
+                    const invoiceType = e.target.value as InvoiceType;
+                    setForm((prev) => {
+                      if (!prev) return prev;
+                      const tenant = tenants.find((t) => t.id.toString() === prev.tenantId);
+                      const next = { ...prev, invoiceType };
+                      next.invoiceNumber = generateInvoiceNumber(
+                        property?.propertyAddress ?? '',
+                        tenant?.tenantName ?? '',
+                        invoiceType,
+                        existingInvoices
+                      );
+                      return next;
+                    });
+                  }}
+                >
+                  {INVOICE_TYPES.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                {isRentalInvoice && currentTenant ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, whiteSpace: 'nowrap' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Non-Recurring
+                    </Typography>
+                    <Switch
+                      checked={displayedRecurring}
+                      onChange={(event) => { const nextValue = event.target.checked; setDisplayedRecurring(nextValue); setIsRecurring(nextValue); }}
+                      disabled={false}
+                      color="secondary"
+                      inputProps={{ 'aria-label': 'Toggle recurring invoices' }}
+                    />
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Recurring
+                    </Typography>
+                  </Box>
+                ) : null}
+              </Stack>
             </Grid>
             <Grid item xs={12} md={4}>
               <TextField label="Invoice Number" value={form.invoiceNumber} onChange={(e) => updateForm({ invoiceNumber: e.target.value })} fullWidth />
@@ -893,24 +861,6 @@ export const InvoiceWorkspacePage = ({ mode }: InvoiceWorkspacePageProps) => {
             creditNoteAmount={creditNoteAmountValue}
           />
         </Paper>
-
-        <Dialog open={recurringDialogOpen} onClose={handleCancelRecurring} maxWidth="sm" fullWidth>
-          <DialogTitle>Confirm Invoice Mode</DialogTitle>
-          <DialogContent>
-            <Typography>
-              Are you sure you want to mark invoices for this tenant as{' '}
-              {pendingRecurring ? 'Recurring' : 'Non-Recurring'}?
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCancelRecurring} disabled={savingRecurring}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmRecurring} variant="contained" disabled={savingRecurring}>
-              {savingRecurring ? 'Saving...' : 'Confirm'}
-            </Button>
-          </DialogActions>
-        </Dialog>
 
       </Stack>
     </Container>
